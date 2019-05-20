@@ -1,0 +1,13 @@
+# Easier navigation: .., ..., ...., ....., ~ and -
+alias ..="cd .."
+alias ...="cd ../.."
+alias ....="cd ../../.."
+alias .....="cd ../../../.."
+alias ~="cd ~" # `cd` is probably faster to type though
+alias -- -="cd -"
+
+# Shadowsocks
+alias on-ss="export http_proxy=http://127.0.0.1:1087;export https_proxy=http://127.0.0.1:1087;"
+alias off-ss="unset http_proxy;unset https_proxy"
+alias ss="http_proxy=http://127.0.0.1:1087 https_proxy=http://127.0.0.1:1087"
+alias edit-ss="vim ~/.ShadowsocksX-NG/user-rule.txt"
