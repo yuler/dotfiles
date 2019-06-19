@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 # Easier navigation: .., ..., ...., ....., ~ and -
 alias ..="cd .."
 alias ...="cd ../.."
@@ -6,8 +8,23 @@ alias .....="cd ../../../.."
 alias ~="cd ~" # `cd` is probably faster to type though
 alias -- -="cd -"
 
+# mv, rm, cp
+alias mv='mv -v'
+alias rm='rm -i -v'
+alias cp='cp -v'
+
+# Shortcuts
+alias d="cd ~/Documents"
+alias dl="cd ~/Downloads"
+alias dt="cd ~/Desktop"
+alias p="cd ~/Projects"
+alias g="git"
+
 # Shadowsocks
-alias on-ss="export http_proxy=http://127.0.0.1:1087;export https_proxy=http://127.0.0.1:1087;"
-alias off-ss="unset http_proxy;unset https_proxy"
 alias ss="http_proxy=http://127.0.0.1:1087 https_proxy=http://127.0.0.1:1087"
-alias edit-ss="vim ~/.ShadowsocksX-NG/user-rule.txt"
+alias ss-on="export http_proxy=http://127.0.0.1:1087;export https_proxy=http://127.0.0.1:1087;"
+alias ss-off="unset http_proxy;unset https_proxy"
+alias ss-edit="$EDITOR ~/.ShadowsocksX-NG/user-rule.txt"
+
+# SSH
+alias sshls="grep -E \"^Host ([^*]+)$\" $HOME/.ssh/config | sed 's/Host //'"
