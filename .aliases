@@ -28,3 +28,6 @@ alias ss-edit="$EDITOR ~/.ShadowsocksX-NG/user-rule.txt"
 
 # SSH
 alias sshls="grep -E \"^Host ([^*]+)$\" $HOME/.ssh/config | sed 's/Host //'"
+
+# Applications
+alias wechatwebdevtools="/Applications/wechatwebdevtools.app/Contents/Resources/app.nw/bin/cli"
