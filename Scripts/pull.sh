@@ -130,7 +130,7 @@ finish () {
   local data=$(curl -s $api)
   local user=$(echo $data | json author.username)
   local prbranch="$(echo $data | json source_branch)"
-
+  local mergestatus="$(echo $data | json merge_status)"
   local lastmsg="$(git log -1 --pretty=%B)"
   local newmsg="${lastmsg}
 PR-URL: ${prweb}
@@ -140,9 +140,15 @@ Reviewed-by: @${me}
 "
   git commit --amend --no-verify -m "$newmsg" 
 
-  git push -o merge_request.merge_when_pipeline_succeeds \
-    -o merge_request.remove_source_branch \
-    -f origin PR-$prnum:$prbranch
+  if [ "$mergestatus" = "can_be_merged" ]; then
+    git push -o merge_request.merge_when_pipeline_succeeds \
+      -o merge_request.remove_source_branch \
+      origin PR-$prnum:$prbranch
+  else
+    git push -o merge_request.merge_when_pipeline_succeeds \
+      -o merge_request.remove_source_branch \
+      -f origin PR-$prnum:$prbranch
+  fi
 
   curl -X PUT \
     -H 'Content-Type: application/json' \
