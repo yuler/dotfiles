@@ -58,10 +58,9 @@ main () {
     echo "aborting PR merge" >&2
   fi
 
-  set -x
   # ok, ready to rock
   branch=PR-$num
-  if [ "$curbranch" == "$branch" ]; then
+  if [ "$prbranch" == "$branch" ]; then
     echo "already on $branch, you're on your own" >&2
     return 1
   fi
@@ -81,7 +80,7 @@ main () {
     git pull --rebase origin $prbranch
   fi
 
-  git rebase -i $curbranch # squash and test
+  git rebase -i $prbranch # squash and test
 
   echo ""
   echo ""
