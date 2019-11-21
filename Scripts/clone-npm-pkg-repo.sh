@@ -6,6 +6,13 @@
 
 main() {
   local package=$1
+
+  if ! [[ $package ]]; then
+    echo "usage:"
+    echo "$0 <npm package>"
+    exit 1
+  fi
+
   local api="curl http://registry.npm.taobao.org/$package"
   local url=$(curl -s $api | json repository.url)
 
