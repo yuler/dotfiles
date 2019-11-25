@@ -18,6 +18,7 @@ main() {
 
   echo "url: $url"
 
+  url="${url#git+}"
   url="${url#git:\/\/github.com\/}"
   url="${url#https:\/\/github.com\/}"
   local repo="${url%.git}"
