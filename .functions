@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+# Test function
+function t() {
+  if [[ "$PWD" =~ "go/src" ]]; then
+    go test
+  elif [[ "$(ls -A "package.json")" ]]; then
+    npm run test
+  else
+    echo "test command"  
+  fi
+}

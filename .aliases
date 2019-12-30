@@ -18,7 +18,6 @@ alias d="cd ~/Documents"
 alias dl="cd ~/Downloads"
 alias dt="cd ~/Desktop"
 alias p="cd ~/Projects"
-alias t="cd ~/Tests"
 alias gh="cd ~/GitHub"
 
 alias g="git"
