@@ -2,9 +2,11 @@
 
 # Test function
 function t() {
-  if [[ "$PWD" =~ "go/src" ]]; then
+  if [[ "$PWD" == "$HOME" ]]
+    cd ~/tests
+  elif [[ "$PWD" =~ "go/src" ]]; then
     go test
-  elif [[ "$(ls -A "package.json")" ]]; then
+  elif [[ -r "package.json" ]]; then
     npm run test
   else
     echo "test command"  
