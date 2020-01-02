@@ -3,7 +3,7 @@
 # Test function
 function t() {
   if [[ "$PWD" == "$HOME" ]]
-    cd ~/tests
+    cd ~/Tests
   elif [[ "$PWD" =~ "go/src" ]]; then
     go test
   elif [[ -r "package.json" ]]; then
