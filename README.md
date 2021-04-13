@@ -1,8 +1,16 @@
-# This repository is dotfiles
+# This Repo is dotfiles
 
-## Load the shell dotfiles, and then some:
+## Add to `~/.bashrc` or `~/.zshrc`
+
 ```bash
-for file in ~/.{exports,aliases,functions}; do
+# Load the shell dotfiles, and then some:
+# * ~/.path can be used to extend `$PATH`.
+# * ~/.extra can be used for other settings you don’t want to commit.
+for file in ~/.{path,bash_prompt,exports,aliases,functions,extra}; do
   [ -r "$file" ] && [ -f "$file" ] && source "$file";
 done;
 ```
+
+## Refs
+
+- [mathiasbynens/dotfiles](https://github.com/mathiasbynens/dotfiles)
