@@ -11,6 +11,11 @@ for file in ~/.{path,bash_prompt,exports,aliases,functions,extra}; do
 done;
 ```
 
+## VSCode Snippets
+
+vscode snippets location is `~/Library/Application\ Support/Code/User/snippets`
+
 ## Refs
 
 - [mathiasbynens/dotfiles](https://github.com/mathiasbynens/dotfiles)
+- [tj/vscode-snippets](https://github.com/tj/vscode-snippets)
