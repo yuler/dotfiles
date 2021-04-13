@@ -20,8 +20,6 @@ alias dt="cd ~/Desktop"
 alias p="cd ~/Projects"
 alias gh="cd ~/GitHub"
 
-alias g="git"
-
 # Shadowsocks
 alias ss="http_proxy=http://127.0.0.1:1087 https_proxy=http://127.0.0.1:1087"
 alias ss-on="export http_proxy=http://127.0.0.1:1087;export https_proxy=http://127.0.0.1:1087;"
@@ -33,3 +31,85 @@ alias sshls="grep -E \"^Host ([^*]+)$\" $HOME/.ssh/config | sed 's/Host //'"
 
 # Applications
 alias wechatwebdevtools="/Applications/wechatwebdevtools.app/Contents/Resources/app.nw/bin/cli"
+
+# Git
+# refs: 
+# https://github.com/mathiasbynens/dotfiles/blob/main/.gitconfig
+# https://github.com/Bash-it/bash-it/blob/master/aliases/available/git.aliases.bash
+# https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/git/git.plugin.zsh
+alias g='git'
+# add
+alias ga='git add'
+alias gaa='git add --all'
+# branch
+alias gb='git branch'
+alias gba='git branch --all'
+alias gbnm="git branch --no-merged"
+alias gbr="git branch --remote"
+alias gbm="git branch --move"
+alias gbd='git branch --delete'
+alias gbD='git branch -D' # Shortcut for --delete --force
+# commit
+alias gc='git commit -v'
+alias gca='git commit -v -a'
+alias gc!='git commit -v --amend'
+alias gca!='git commit -v -a --amend'
+alias gcam='git commit -v -a -m'
+# checkout
+alias gco='git checkout' 
+alias gcb='git checkout -b'
+alias gcm='git checkout main'
+# clone
+alias gcl='git clone --recurse-submodules'
+# clean
+alias gclean='git clean -fd'
+# cherry-pick
+alias gcp='git cherry-pick'
+alias gcpx='git cherry-pick -x'
+# diff
+alias gd='git diff'
+alias gds='git diff --staged'
+# fetch
+alias gf='git fetch'
+alias gfa='git fetch --all --prune --jobs=10'
+# log
+alias glog='git log --oneline --decorate --graph'
+alias glol="git log --graph --pretty='%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset'"
+alias glols="git log --graph --pretty='%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --stat"
+alias glola="git log --graph --pretty='%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --all"
+alias glod="git log --graph --pretty='%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%ad) %C(bold blue)<%an>%Creset'"
+alias glods="git log --graph --pretty='%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%ad) %C(bold blue)<%an>%Creset' --date=short"
+# merge
+alias gm='git merge'
+# move
+alias gmv='git move'
+# rm
+alias grm='git rm'
+# push
+alias gp='git push'
+alias gpu='git push --set-upstream'
+alias gpf!='git push --force'
+alias gpo='git push origin `git branch --show-current`'
+# pull
+alias gl='git pull'
+# remote
+alias gr='git remote'
+alias grv='git remote -v'
+alias gra='git remote add'
+# rebase
+alias grb='git rebase'
+alias grbi='git rebase -i'
+# reset
+alias gus='git reset HEAD'
+# status
+alias gs='git status'
+alias gst='git status'
+alias gss='git status -s'
+# show
+alias gsh='git show'
+# tag
+alias gt='git tag'
+# switch
+alias gsw='git switch'
+# wip
+alias gwip='git add -A; git rm $(git ls-files --deleted) 2> /dev/null; git commit --no-verify --no-gpg-sign -m "wip: Work in progress [skip ci]"; gc!'
