@@ -18,7 +18,6 @@ alias d="cd ~/Documents"
 alias dl="cd ~/Downloads"
 alias dt="cd ~/Desktop"
 alias p="cd ~/Projects"
-alias gh="cd ~/GitHub"
 
 # Shadowsocks
 alias ss="http_proxy=http://127.0.0.1:1087 https_proxy=http://127.0.0.1:1087"
