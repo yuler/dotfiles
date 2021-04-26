@@ -54,10 +54,11 @@ alias gca='git commit -v -a'
 alias gc!='git commit -v --amend'
 alias gca!='git commit -v -a --amend'
 alias gcam='git commit -v -a -m'
+alias gcinit='git commit -m "Initial commit"'
 # checkout
 alias gco='git checkout' 
 alias gcb='git checkout -b'
-alias gcm='git checkout main'
+alias gcm='git checkout main 2>/dev/null || git checkout master'
 # clone
 alias gcl='git clone --recurse-submodules'
 # clean
