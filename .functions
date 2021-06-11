@@ -12,3 +12,15 @@ function t() {
     echo "test command"  
   fi
 }
+
+# Git clone function
+function gclone() {
+  if ! command -v gh &> /dev/null
+  then
+    echo "gh command not found"
+    exit
+  fi
+  # dir=${1%/*}
+  # mkdir -p $dir && cd $_
+  gh repo clone $1 ${1/\//@}
+}
