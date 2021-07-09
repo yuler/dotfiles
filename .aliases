@@ -13,6 +13,9 @@ alias mv='mv -v'
 alias rm='rm -i -v'
 alias cp='cp -v'
 
+# ll
+alias ll='ls -al'
+
 # Shortcuts
 alias d="cd ~/Documents"
 alias dl="cd ~/Downloads"
