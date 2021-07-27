@@ -43,6 +43,8 @@ alias g='git'
 # add
 alias ga='git add'
 alias gaa='git add --all'
+# upstream
+alias gsup='git branch --set-upstream-to=origin/`git branch --show-current`'
 # branch
 alias gb='git branch'
 alias gba='git branch --all'
