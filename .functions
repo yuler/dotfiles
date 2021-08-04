@@ -22,5 +22,9 @@ function gclone() {
   fi
   # dir=${1%/*}
   # mkdir -p $dir && cd $_
-  gh repo clone $1 ${1/\//@}
+  dir=$2
+  if [[ -z $dir ]]; then
+    dir=${1/\//@}
+  fi
+  gh repo clone $1 $dir
 }
