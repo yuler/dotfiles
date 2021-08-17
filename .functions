@@ -7,7 +7,7 @@ function t() {
   elif [[ "$PWD" =~ "go/src" ]]; then
     go test
   elif [[ -r "package.json" ]]; then
-    npm run test
+    npm test $@
   else
     echo "test command"  
   fi
