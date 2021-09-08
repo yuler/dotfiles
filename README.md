@@ -18,4 +18,7 @@ vscode snippets location is `~/Library/Application\ Support/Code/User/snippets`
 ## Refs
 
 - [mathiasbynens/dotfiles](https://github.com/mathiasbynens/dotfiles)
+- [thoughtbot/dotfiles](https://github.com/thoughtbot/dotfiles)
+- [necolas/dotfiles](https://github.com/necolas/dotfiles)
+- [webpro/awesome-dotfiles](https://github.com/webpro/awesome-dotfiles)
 - [tj/vscode-snippets](https://github.com/tj/vscode-snippets)
