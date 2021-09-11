@@ -20,13 +20,16 @@ function gclone() {
     echo "gh command not found"
     exit
   fi
-  # dir=${1%/*}
-  # mkdir -p $dir && cd $_
+
+  repo=$1
+  repo=${repo/#https:\/\/github.com\//}
   dir=$2
+
   if [[ -z $dir ]]; then
-    dir=${1/\//@}
+    dir=${repo/\//@}
   fi
-  gh repo clone $1 $dir
+
+  gh repo clone $repo $dir
 }
 
 # Fuck the company naming conventions
