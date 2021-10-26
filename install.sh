@@ -1,5 +1,5 @@
 cat <<EOF
-Copy .aliases & .functions to ~
+Link .aliases & .functions to ~
 EOF
 
 ln -s $PWD/.aliases $HOME/.aliases
