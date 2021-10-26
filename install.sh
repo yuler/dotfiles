@@ -1,6 +1,6 @@
-cat << EOF
+cat <<EOF
 Copy .aliases & .functions to ~
 EOF
 
-cp .aliases ~
-cp .functions ~
+ln -s $PWD/.aliases $HOME/.aliases
+ln -s $PWD/.functions $HOME/.functions

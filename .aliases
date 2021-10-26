@@ -16,11 +16,15 @@ alias cp='cp -v'
 # ll
 alias ll='ls -al'
 
-# Shortcuts
+# Directory Shortcuts
 alias d="cd ~/Documents"
 alias dl="cd ~/Downloads"
 alias dt="cd ~/Desktop"
 alias p="cd ~/Projects"
+
+# NPM Shortcuts
+alias ni="npm install"
+alias nt="npm run test"
 
 # Shadowsocks
 alias ss="http_proxy=http://127.0.0.1:1087 https_proxy=http://127.0.0.1:1087"
@@ -35,7 +39,7 @@ alias sshls="grep -E \"^Host ([^*]+)$\" $HOME/.ssh/config | sed 's/Host //'"
 alias wechatwebdevtools="/Applications/wechatwebdevtools.app/Contents/Resources/app.nw/bin/cli"
 
 # Git
-# refs: 
+# refs:
 # https://github.com/mathiasbynens/dotfiles/blob/main/.gitconfig
 # https://github.com/Bash-it/bash-it/blob/master/aliases/available/git.aliases.bash
 # https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/git/git.plugin.zsh
@@ -61,7 +65,7 @@ alias gca!='git commit -v -a --amend'
 alias gcam='git commit -v -a -m'
 alias gcinit='git commit -m "Initial commit"'
 # checkout
-alias gco='git checkout' 
+alias gco='git checkout'
 alias gcb='git checkout -b'
 alias gcm='git checkout main 2>/dev/null || git checkout master'
 # clone
