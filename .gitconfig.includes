@@ -1,0 +1,6 @@
+# You can define some includeIf
+# refs: https://git-scm.com/docs/git-config#_conditional_includes
+
+# Example:
+# [includeIf "gitdir:~/some/path/to/"]
+# path = ~/.gitconfig.local

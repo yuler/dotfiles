@@ -1,12 +1,12 @@
-# git config --global http.proxy http://127.0.0.1:1087
-# git config --global https.proxy https://127.0.0.1:1087
+[user]
+name = yuler
+email = joyful4yu@gmail.com
 
-[http]
-	proxy = http://127.0.0.1:1087
-[https]
-	proxy = https://127.0.0.1:1087
+[init]
+defaultBranch = main
 
+[http "https://github.com"]
+proxy = http://127.0.0.1:1087
 
-# Set company dir use difference config
-[includeIf "gitdir:~/company/"]
-	path = ~/.gitconfig-company 
+[include]
+path = ~/.gitconfig.includes
