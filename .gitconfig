@@ -8,5 +8,8 @@ defaultBranch = main
 [http "https://github.com"]
 proxy = http://127.0.0.1:1087
 
+[pull]
+rebase = true
+
 [include]
 path = ~/.gitconfig.includes
