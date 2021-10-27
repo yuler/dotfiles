@@ -1,8 +1,9 @@
 cat <<EOF
-Link .aliases & .functions & .gitconfig to ~
+Link .{path,bash_prompt,exports,aliases,functions,extra,gitconfig} to ~
 EOF
 
-ln -s $PWD/.aliases $HOME/.aliases
-ln -s $PWD/.functions $HOME/.functions
-ln -s $PWD/.gitconfig $HOME/.gitconfig
+for file in .{path,bash_prompt,exports,aliases,functions,extra,gitconfig}; do
+    [ -r "$file" ] && [ -f "$file" ] && ln -s $PWD/$file $HOME/$file
+done
+
 cp $PWD/.gitconfig.includes $HOME/.gitconfig.includes

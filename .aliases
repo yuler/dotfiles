@@ -23,8 +23,13 @@ alias dt="cd ~/Desktop"
 alias p="cd ~/Projects"
 
 # NPM Shortcuts
-alias ni="npm install"
-alias nt="npm run test"
+alias n="$n"
+alias ni="$n install"
+alias nt="$n test"
+alias nr="$n run"
+alias nx="$n ldx"
+alias nu="$n upgrade"
+alias nrm="$n remove"
 
 # Shadowsocks
 alias ss="http_proxy=http://127.0.0.1:1087 https_proxy=http://127.0.0.1:1087"
