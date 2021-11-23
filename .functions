@@ -39,3 +39,8 @@ function git-feature() {
   branch="feature-$date_format-$1"
   git checkout -b $branch
 }
+
+
+gh-todo() {
+  gh todo $@
+}
