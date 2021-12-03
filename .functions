@@ -32,7 +32,7 @@ function gclone() {
   gh repo clone $repo $dir
 }
 
-# Fuck the company naming conventions
+# Fuck the SHT company naming conventions
 # Example: feature-YYYYmmdd-name
 function git-feature() {
   date_format=`date -u +"%Y%m%d"`
@@ -40,7 +40,12 @@ function git-feature() {
   git checkout -b $branch
 }
 
+# Open browser goto repo home page by origin remote
+function git-home() {
+  url=$(git config remote.origin.url)
+  open $url
+}
 
-gh-todo() {
+function gh-todo() {
   gh todo $@
 }
