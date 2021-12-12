@@ -2,7 +2,7 @@ cat <<EOF
 Link .{path,bash_prompt,exports,aliases,functions,extra,gitconfig} to ~
 EOF
 
-for file in .{path,bash_prompt,exports,aliases,functions,extra,gitconfig}; do
+for file in .{path,bash_prompt,exports,exports.local,aliases,functions,extra,gitconfig,gitconfig.local}; do
     [ -r "$file" ] && [ -f "$file" ] && ln -s $PWD/$file $HOME/$file
 done
 
