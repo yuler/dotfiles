@@ -1,4 +1,6 @@
 .DS_Store
 
 .exports.local
+
+.gitconfig.includes
 .gitconfig.local
