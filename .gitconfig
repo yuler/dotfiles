@@ -13,3 +13,6 @@ rebase = true
 
 [include]
 path = ~/.gitconfig.includes
+
+# [credential "https://github.com"]
+# helper = !/usr/local/bin/gh auth git-credential
