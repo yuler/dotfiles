@@ -32,8 +32,8 @@ alias nu="$n upgrade"
 alias nrm="$n remove"
 
 # Proxy
-alias ss="http_proxy=http://127.0.0.1:1087 https_proxy=http://127.0.0.1:1087"
-alias ss-on="export http_proxy=http://127.0.0.1:1087;export https_proxy=http://127.0.0.1:1087;"
+alias ss="http_proxy=http://127.0.0.1:7890 https_proxy=http://127.0.0.1:7890"
+alias ss-on="export http_proxy=http://127.0.0.1:7890;export https_proxy=http://127.0.0.1:7890;"
 alias ss-off="unset http_proxy;unset https_proxy"
 alias ss-edit="$EDITOR ~/.ShadowsocksX-NG/user-rule.txt"
 alias brew="ss brew"

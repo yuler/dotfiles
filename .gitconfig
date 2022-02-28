@@ -6,7 +6,7 @@ email = is.yuler@gmail.com
 defaultBranch = main
 
 [http "https://github.com"]
-proxy = http://127.0.0.1:1087
+proxy = http://127.0.0.1:7890
 
 [pull]
 rebase = true
