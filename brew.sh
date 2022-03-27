@@ -11,6 +11,7 @@ apps=(
    gh
    go
    glab
+   wifi-password
 )
 
 brew install "${apps[@]}"
