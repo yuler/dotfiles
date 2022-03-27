@@ -10,7 +10,6 @@ for file in .{path,bash_prompt,exports,exports.local,aliases,functions,extra,git
     [ -r "$file" ] && [ -f "$file" ] && ln -s $PWD/$file $HOME/$file
 done
 
-cp $PWD/.gitconfig.includes $HOME/.gitconfig.includes
-
 # VSCode
+mv $HOME/Library/Application\ Support/Code/User/keybindings.json $HOME/Library/Application\ Support/Code/User/keybindings.json.bak
 ln -s $PWD/.vscode/keybindings.json $HOME/Library/Application\ Support/Code/User/keybindings.json
