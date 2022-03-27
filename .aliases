@@ -24,12 +24,13 @@ alias p="cd ~/Projects"
 
 # NPM Shortcuts
 alias n="$n"
-alias ni="$n install"
-alias nt="$n test"
-alias nr="$n run"
-alias nx="$n dlx"
-alias nu="$n upgrade"
-alias nrm="$n remove"
+# Replace with `@antfu/ni`
+# alias ni="$n install"
+# alias nt="$n test"
+# alias nr="$n run"
+# alias nx="$n dlx"
+# alias nu="$n upgrade"
+# alias nrm="$n remove"
 
 # Proxy
 alias ss="http_proxy=http://127.0.0.1:7890 https_proxy=http://127.0.0.1:7890"
@@ -106,6 +107,5 @@ alias gsh='git show'
 alias gt='git tag'
 alias gsw='git switch'
 alias gwip='git add -A; git rm $(git ls-files --deleted) 2> /dev/null; git commit --no-verify --no-gpg-sign -m "wip: xxx. [skip] ci"; gc!'
-
 
 alias todo="gh-todo"
