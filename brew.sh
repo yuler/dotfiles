@@ -12,6 +12,7 @@ apps=(
    go
    glab
    wifi-password
+   git-extras
 )
 
 brew install "${apps[@]}"
