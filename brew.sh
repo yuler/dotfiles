@@ -13,6 +13,7 @@ apps=(
    glab
    wifi-password
    git-extras
+   sequel-ace
 )
 
 brew install "${apps[@]}"
