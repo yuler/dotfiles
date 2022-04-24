@@ -14,6 +14,7 @@ apps=(
    wifi-password
    git-extras
    sequel-ace
+   httpstat
 )
 
 brew install "${apps[@]}"

@@ -9,14 +9,13 @@ function t() {
   elif [[ -r "package.json" ]]; then
     npm test $@
   else
-    echo "test command"  
+    echo "test command"
   fi
 }
 
 # Git clone function
 function gclone() {
-  if ! command -v gh &> /dev/null
-  then
+  if ! command -v gh &>/dev/null; then
     echo "gh command not found"
     exit
   fi
@@ -30,14 +29,6 @@ function gclone() {
   fi
 
   gh repo clone $repo $dir
-}
-
-# Fuck the SHT company naming conventions
-# Example: feature-YYYYmmdd-name
-function git-feature() {
-  date_format=`date -u +"%Y%m%d"`
-  branch="feature-$date_format-$1"
-  git checkout -b $branch
 }
 
 # Open browser goto repo home page by origin remote

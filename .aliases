@@ -114,3 +114,6 @@ alias todo="gh-todo"
 alias hbuilderx='/Applications/HBuilderX.app/Contents/MacOS/cli'
 # WeChat Devtools IDE
 alias wechatdevtools='/Applications/wechatwebdevtools.app/Contents/MacOS/cli'
+
+# httpstat
+alias headers=httpstat
