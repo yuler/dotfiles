@@ -3,11 +3,11 @@
 # Test function
 function t() {
   if [[ "$PWD" == "$HOME" ]]; then
-    cd ~/Tests
-  elif [[ "$PWD" =~ "go/src" ]]; then
-    go test
+    cd ~/Tests || exit
   elif [[ -r "package.json" ]]; then
-    npm test $@
+    npm test "$@"
+  elif [[ -r "go.mod" ]]; then
+    go test "$@"
   else
     echo "test command"
   fi
@@ -31,12 +31,19 @@ function gclone() {
   gh repo clone $repo $dir
 }
 
+# Example: feature-YYYYmmdd-name
+function git-feature() {
+  date_format=$(date -u +"%Y%m%d")
+  branch="feature-$date_format-$1"
+  git checkout -b "$branch"
+}
+
 # Open browser goto repo home page by origin remote
 function git-home() {
   url=$(git config remote.origin.url)
-  open $url
+  open "$url"
 }
 
 function gh-todo() {
-  gh todo $@
+  gh todo "$@"
 }
