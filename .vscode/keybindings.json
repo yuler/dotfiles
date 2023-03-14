@@ -1,13 +1,17 @@
+// Place your key bindings in this file to override the defaultsauto[]
 [
-	// refs: https://github.com/yzhang-gh/vscode-markdown/issues/1011
-	{
-		"key": "tab",
-		"command": "markdown.extension.onTabKey",
-		"when": "editorTextFocus && !inlineSuggestionVisible && !editorReadonly && !editorTabMovesFocus && !hasOtherSuggestions && !hasSnippetCompletions && !inSnippetMode && !suggestWidgetVisible && editorLangId == 'markdown'"
-	},
-	{
-		"key": "tab",
-		"command": "-markdown.extension.onTabKey",
-		"when": "editorTextFocus && !editorReadonly && !editorTabMovesFocus && !hasOtherSuggestions && !hasSnippetCompletions && !inSnippetMode && !suggestWidgetVisible && editorLangId == 'markdown'"
-	}
+    {
+        "key": "cmd+'",
+        "command": "leetcode.testSolution"
+    },
+    {
+        "key": "tab",
+        "command": "markdown.extension.onTabKey",
+        "when": "editorTextFocus && !inlineSuggestionVisible && !editorReadonly && !editorTabMovesFocus && !hasOtherSuggestions && !hasSnippetCompletions && !inSnippetMode && !suggestWidgetVisible && editorLangId == 'markdown'"
+    },
+    {
+        "key": "tab",
+        "command": "-markdown.extension.onTabKey",
+        "when": "editorTextFocus && !editorReadonly && !editorTabMovesFocus && !hasOtherSuggestions && !hasSnippetCompletions && !inSnippetMode && !suggestWidgetVisible && editorLangId == 'markdown'"
+    }
 ]
