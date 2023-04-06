@@ -8,17 +8,17 @@ PROJECT_NAME="$(basename "$(pwd)")"
 # .npmrc
 .npmrc() {
     cat >.npmrc <<-EOF
+registry=https://registry.npmmirror.com
 shamefully-hoist=true
 auto-install-peers=true
 
 # mirrors: refs: https://github.com/cnpm/binary-mirror-config/blob/master/package.json#L49
-registry=https://registry.npmmirror.com
 NODEJS_ORG_MIRROR=https://cdn.npmmirror.com/binaries/node
 NVM_NODEJS_ORG_MIRROR=https://cdn.npmmirror.com/binaries/node
 PHANTOMJS_CDNURL=https://cdn.npmmirror.com/binaries/phantomjs
 CHROMEDRIVER_CDNURL=https://cdn.npmmirror.com/binaries/chromedriver
 OPERADRIVER_CDNURL=https://cdn.npmmirror.com/binaries/operadriver
-CYPRESS_DOWNLOAD_PATH_TEMPLATE=https://cdn.npmmirror.com/binaries/cypress/\${version}/\${platform}-\${arch}/cypress.zip
+CYPRESS_DOWNLOAD_PATH_TEMPLATE=https://cdn.npmmirror.com/binaries/cypress/\\\${version}/\\\${platform}-\\\${arch}/cypress.zip
 ELECTRON_MIRROR=https://cdn.npmmirror.com/binaries/electron/
 ELECTRON_BUILDER_BINARIES_MIRROR=https://cdn.npmmirror.com/binaries/electron-builder-binaries/
 SASS_BINARY_SITE=https://cdn.npmmirror.com/binaries/node-sass
