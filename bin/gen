@@ -13,6 +13,7 @@ shamefully-hoist=true
 auto-install-peers=true
 
 # mirrors: refs: https://github.com/cnpm/binary-mirror-config/blob/master/package.json#L49
+COREPACK_NPM_REGISTRY=https://registry.npmmirror.com
 NODEJS_ORG_MIRROR=https://cdn.npmmirror.com/binaries/node
 NVM_NODEJS_ORG_MIRROR=https://cdn.npmmirror.com/binaries/node
 PHANTOMJS_CDNURL=https://cdn.npmmirror.com/binaries/phantomjs
@@ -45,6 +46,36 @@ $(node -v)
 EOF
 }
 
+# .gitignore
+.gitignore() {
+    cat >.npmrc <<-EOF
+# Mac
+.DS_Store
+
+# Node.js
+node_modules
+dist
+
+# Editor
+.idea
+
+# Logs
+*.log
+*.logs
+
+# Envs
+.env
+.env.*.local
+EOF
+}
+
+# .gitattributes
+.gitattributes() {
+    cat >.npmrc <<-EOF
+* text=auto eol=lf
+EOF
+}
+
 generate_file() {
     if [[ -z "$file" ]]; then
         echo "Pass a file name to generate_file." 1>&2
@@ -55,7 +86,7 @@ generate_file() {
 main() {
     echo "Generating project files for '${PROJECT_NAME}'..."
 
-    whitelist=(".npmrc" ".nvmrc")
+    whitelist=(".npmrc" ".nvmrc", ".gitattirbutes")
 
     for name in "$@"; do
         # is in whitelist array ?
