@@ -48,7 +48,7 @@ EOF
 
 # .gitignore
 .gitignore() {
-    cat >.npmrc <<-EOF
+    cat >.gitignore <<-EOF
 # Mac
 .DS_Store
 
@@ -86,7 +86,7 @@ generate_file() {
 main() {
     echo "Generating project files for '${PROJECT_NAME}'..."
 
-    whitelist=(".npmrc" ".nvmrc", ".gitattirbutes")
+    whitelist=(".npmrc" ".nvmrc" ".gitignore" ".gitattirbutes")
 
     for name in "$@"; do
         # is in whitelist array ?
