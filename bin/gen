@@ -8,6 +8,7 @@ PROJECT_NAME="$(basename "$(pwd)")"
 # .npmrc
 .npmrc() {
     cat >.npmrc <<-EOF
+message="chore: release v%s"
 registry=https://registry.npmmirror.com
 # shamefully-hoist=true
 # auto-install-peers=true
