@@ -6,7 +6,7 @@ touch .gitconfig.includes
 touch .gitconfig.local
 touch .exports.local
 
-for file in .{path,bash_prompt,exports,exports.local,aliases,functions,extra,gitconfig,gitconfig.includes,gitconfig.local}; do
+for file in .{path,bash_prompt,exports,exports.local,aliases,functions,extra,gitconfig,gitconfig.includes,gitconfig.local,npm-init.js}; do
     [ -r "$file" ] && [ -f "$file" ] && ln -s $PWD/$file $HOME/$file
 done
 
