@@ -47,6 +47,20 @@ $(node -v)
 EOF
 }
 
+.prettierrc.json() {
+    cat >.prettierrc.json <<-EOF
+{
+  "$schema": "http://json.schemastore.org/prettierrc",
+  "trailingComma": "all",
+  "singleQuote": true,
+  "semi": false,
+  "useTabs": false,
+  "tabWidth": 2,
+  "arrowParens": "avoid"
+}
+EOF
+}
+
 # .gitignore
 .gitignore() {
     cat >.gitignore <<-EOF
@@ -87,7 +101,14 @@ generate_file() {
 main() {
     echo "Generating project files for '${PROJECT_NAME}'..."
 
-    whitelist=(".npmrc" ".nvmrc" ".gitignore" ".gitattirbutes")
+    whitelist=(".npmrc" ".nvmrc" ".prettierrc.json" ".gitignore" ".gitattirbutes")
+
+    # Usage
+    if [[ $# -eq 0 ]]; then
+        echo "Usage: gen <filename>"
+        echo "Supported filenames: ${whitelist[*]}"
+        exit 1
+    fi
 
     for name in "$@"; do
         # is in whitelist array ?
