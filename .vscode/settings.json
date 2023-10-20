@@ -1,0 +1,71 @@
+{
+	// Proxy
+	"http.proxy": "http://127.0.0.1:7890",
+
+	// Spell
+	"cSpell.enabledLanguageIds": ["*"],
+	"cSpell.userWords": ["yuler", "pnpm", "unocss", "Tencent", "Wechat", "miniprogram"],
+
+	// Workbench
+	"workbench.startupEditor": "none",
+	"workbench.colorTheme": "Default Dark Modern",
+	"workbench.settings.editor": "json",
+	"window.zoomLevel": 2,
+
+	// File nesting
+	"explorer.fileNesting.enabled": true,
+	"explorer.fileNesting.expand": false,
+
+	// Editor
+	"editor.inlineSuggest.enabled": true,
+	"editor.tabSize": 2,
+	"editor.fontFamily": "Fira Code",
+	"editor.fontLigatures": true,
+	// Formats
+	// Prettier
+	"editor.formatOnSave": true,
+	"editor.defaultFormatter": "esbenp.prettier-vscode",
+	"prettier.useEditorConfig": false,
+	"prettier.printWidth": 120,
+	"prettier.useTabs": true,
+	"prettier.tabWidth": 2,
+	"prettier.semi": false,
+	"prettier.singleQuote": true,
+	"prettier.trailingComma": "es5",
+	"[shellscript]": {
+		"editor.defaultFormatter": "foxundermoon.shell-format"
+	},
+	"[astro]": {
+		"editor.defaultFormatter": "astro-build.astro-vscode"
+	},
+	"[bash]": {
+		"editor.defaultFormatter": "foxundermoon.shell-format"
+	},
+	"[dockerfile]": {
+		"editor.defaultFormatter": "ms-azuretools.vscode-docker"
+	},
+	"[prisma]": {
+		"editor.defaultFormatter": "Prisma.prisma"
+	},
+
+	// Eslint
+	"eslint.format.enable": false,
+	"editor.codeActionsOnSave": {
+		"source.fixAll": false,
+		"source.fixAll.eslint": true
+	},
+
+	// Golang
+	"go.formatTool": "goimports",
+
+	// Wechat miniprogram
+	"files.associations": {
+		"*.wxss": "css",
+		"*.wxml": "html",
+		"*.wxs": "javascript",
+		"*.cjson": "jsonc"
+	},
+	"emmet.includeLanguages": {
+		"wxml": "html"
+	}
+}
