@@ -8,6 +8,8 @@ function t() {
     npm test "$@"
   elif [[ -r "go.mod" ]]; then
     go test "$@"
+  elif [[ -r "Gemfile" ]]; then
+    rake test "$@"
   else
     echo "test command"
   fi
