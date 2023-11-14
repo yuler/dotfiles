@@ -1,3 +1,5 @@
+#!/bin/bash
+
 cat <<EOF
 Link .{path,bash_prompt,exports,aliases,functions,extra,gitconfig}, bin to ~
 EOF
