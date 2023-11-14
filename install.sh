@@ -15,3 +15,18 @@ ln -s $PWD/bin $HOME/bin
 # VSCode
 mv $HOME/Library/Application\ Support/Code/User/keybindings.json $HOME/Library/Application\ Support/Code/User/keybindings.json.bak
 ln -s $PWD/.vscode/keybindings.json $HOME/Library/Application\ Support/Code/User/keybindings.json
+
+function append() {
+    local text="$1" file="$2"
+
+    [[ -f $file ]] && touch $file
+
+    if ! grep -q "$text" "$file"; then
+        echo "$text" >>"$file"
+    fi
+}
+
+# Fetching public keys
+echo "Fetching public keys..."
+mkdir -p $HOME/.ssh
+append "$(curl https://github.com/yulers.keys)" $HOME/.ssh/authorized_keys
