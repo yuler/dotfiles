@@ -120,5 +120,5 @@ alias wechatdevtools='/Applications/wechatwebdevtools.app/Contents/MacOS/cli'
 alias headers=httpstat
 
 # Node.js CLI
-alias npkill='ss pnpm dlx npkill -- -s size'
-alias kill-tabs='ss pnpm dlx kill-tabs'
+alias npkill='npx npkill -s size'
+alias kill-tabs='npx kill-tabs'
