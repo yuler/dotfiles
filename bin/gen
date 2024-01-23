@@ -86,7 +86,7 @@ EOF
 
 # .gitattributes
 .gitattributes() {
-    cat >.npmrc <<-EOF
+    cat >.gitattributes <<-EOF
 * text=auto eol=lf
 EOF
 }
