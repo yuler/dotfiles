@@ -101,7 +101,7 @@ generate_file() {
 main() {
     echo "Generating project files for '${PROJECT_NAME}'..."
 
-    whitelist=(".npmrc" ".nvmrc" ".prettierrc.json" ".gitignore" ".gitattirbutes")
+    whitelist=(".npmrc" ".nvmrc" ".prettierrc.json" ".gitignore" ".gitattributes")
 
     # Usage
     if [[ $# -eq 0 ]]; then
