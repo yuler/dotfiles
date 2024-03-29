@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+set -e
+set -o pipefail
+
+# get args
+sha=$*
+if [ -z "$sha" ]; then
+  # Get last commit sha
+  sha=$(git log -1 --pretty=format:"%H")
+fi
+
+branch=$(git branch --show-current)
+
+git checkout testing
+git pull --rebase
+git cherry-pick $sha
+git push origin testing
+git checkout $branch
