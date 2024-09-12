@@ -19,3 +19,7 @@ ignorecase = false
 
 # [credential "https://github.com"]
 # helper = !/usr/local/bin/gh auth git-credential
+[credential "https://github.com"]
+	useHttpPath = true
+[credential]
+	helper = osxkeychain

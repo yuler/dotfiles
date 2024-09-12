@@ -3,3 +3,4 @@
 # Make vim the default editor.
 export EDITOR='vim'
 export n='pnpm'
+export DOCKER_HOST=unix:///var/run/docker.sock
