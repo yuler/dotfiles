@@ -16,6 +16,7 @@ path = ~/.gitconfig.includes
 
 [core]
 ignorecase = false
+pager = delta
 
 # [credential "https://github.com"]
 # helper = !/usr/local/bin/gh auth git-credential
