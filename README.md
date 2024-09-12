@@ -3,8 +3,9 @@
 ## Add to `~/.bashrc` or `~/.zshrc`
 
 ```bash
-# Add `~/bin` to the `$PATH`
-export PATH="$HOME/bin:$PATH";
+# Add `/bin` to the `$PATH`
+export DOTFILES_DIR="The path to this repo"
+export PATH="$DOTFILES_DIR/bin:$PATH";
 
 # Load the shell dotfiles, and then some:
 # * ~/.path can be used to extend `$PATH`.
