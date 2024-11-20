@@ -1,0 +1,11 @@
+# refs: https://guides.rubyonrails.org/command_line.html#rails-new
+
+--database=sqlite3
+--css=tailwind
+--skip-bundle
+
+--skip-javascript [due to --api]
+--skip-hotwire [due to --skip-javascript]
+--skip-asset-pipeline [due to --api]
+
+--template=~/rails_template.rb

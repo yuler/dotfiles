@@ -18,6 +18,10 @@ ln -s $PWD/bin $HOME/bin
 mv $HOME/Library/Application\ Support/Code/User/keybindings.json $HOME/Library/Application\ Support/Code/User/keybindings.json.bak
 ln -s $PWD/.vscode/keybindings.json $HOME/Library/Application\ Support/Code/User/keybindings.json
 
+# .railsrc
+ln -s $PWD/.railsrc $HOME/.railsrc
+ln -s $PWD/rails_template.rb $HOME/rails_template.rb
+
 function append() {
     local text="$1" file="$2"
 
