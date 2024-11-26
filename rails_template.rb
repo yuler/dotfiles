@@ -62,6 +62,8 @@ GEM_FILE
 run "echo '#{gem_file}' > Gemfile"
 run "echo '# #{@app_name.titleize}' > README.md"
 
+run "bundle lock --add-platform x86_64-linux"
+
 git :init
 git add: "."
 git commit: "-a -m 'Initial commit'"
