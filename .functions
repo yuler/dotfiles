@@ -46,6 +46,7 @@ function git-home() {
   open "$url"
 }
 
+# refs https://github.com/yuler/gh-todo
 function gh-todo() {
   gh todo "$@"
 }

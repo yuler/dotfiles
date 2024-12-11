@@ -1,19 +1,10 @@
 # This Repo is dotfiles
 
-## Add to `~/.bashrc` or `~/.zshrc`
+## Install
 
-```bash
-# Add `/bin` to the `$PATH`
-export DOTFILES_DIR="The path to this repo"
-export PATH="$DOTFILES_DIR/bin:$PATH";
-
-# Load the shell dotfiles, and then some:
-# * ~/.path can be used to extend `$PATH`.
-# * ~/.extra can be used for other settings you don’t want to commit.
-for file in ~/.{path,bash_prompt,exports,exports.local,aliases,functions,extra}; do
-  [ -r "$file" ] && [ -f "$file" ] && source "$file";
-done;
-```
+- [install.sh](./install.sh) link special dotfiles to home directory
+- [brew.sh](./brew.sh) install cli & gui tools
+- [npms.sh](./npms.sh) install npm cli packages to global
 
 ## VSCode Snippets
 

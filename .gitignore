@@ -4,3 +4,4 @@
 
 .gitconfig.includes
 .gitconfig.local
+.gitconfig.*.local
