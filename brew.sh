@@ -21,6 +21,7 @@ apps=(
    httpstat      # http client tools
    wifi-password # Get wifi password CLI
    fnm           # https://github.com/Schniz/fnm
+   rbenv         # https://github.com/rbenv/rbenv
 )
 
 for app in "${apps[@]}"; do
@@ -37,6 +38,7 @@ casks=(
    orbstack           # https://orbstack.dev/
    google-chrome      # https://www.google.com/chrome/
    visual-studio-code # https://code.visualstudio.com/
+   telegram           # https://macos.telegram.org/
 )
 
 # Applications with special names
@@ -46,6 +48,7 @@ declare -A cask_map=(
    ["orbstack"]="Orbstack"
    ["google-chrome"]="Google Chrome"
    ["visual-studio-code"]="Visual Studio Code"
+   ["telegram"]="Telegram"
 )
 
 for cask in "${casks[@]}"; do
@@ -59,5 +62,5 @@ for cask in "${casks[@]}"; do
       echo "/Applications/$app_name.app is already installed. Skipping..."
       continue
    fi
-   brew install --cask "$cask" &>/dev/null
+   brew install --cask "$cask"
 done
