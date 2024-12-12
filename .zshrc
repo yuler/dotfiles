@@ -1,9 +1,7 @@
-# brew
-eval "$(/opt/homebrew/bin/brew shellenv)"
-# fnm
+DOTFILES_PATH="$HOME/Projects/dotfiles"
 
 # Add `~/bin` to the `$PATH`
-export PATH="$HOME/bin:$PATH"
+export PATH="$HOME/bin:$DOTFILES_PATH/bin:$PATH"
 
 # Load the shell dotfiles, and then some:
 # * ~/.path can be used to extend `$PATH`.
@@ -12,9 +10,8 @@ for file in ~/.{path,bash_prompt,exports,exports.local,aliases,functions,extra};
   [ -r "$file" ] && [ -f "$file" ] && source "$file"
 done
 
-# export PNPM_HOME="/Users/yule/Library/pnpm"
-# export PATH="$PNPM_HOME:$PATH"
-# eval "$(pyenv init -)"
+# brew
+eval "$(/opt/homebrew/bin/brew shellenv)"
 
 # go
 PATH=$PATH:$(go env GOPATH)/bin
@@ -40,12 +37,18 @@ eval "$(fnm env --use-on-cd)"
 # refs:https://github.com/microsoft/vscode-docs/issues/5221#issuecomment-1061081538
 # bindkey -e
 
+# export PNPM_HOME="/Users/yule/Library/pnpm"
+# export PATH="$PNPM_HOME:$PATH"
+# eval "$(pyenv init -)"
+
 # ruby
-# if [ -d "/opt/homebrew/opt/ruby/bin" ]; then
-#   export PATH=/opt/homebrew/opt/ruby/bin:$PATH
-#   export PATH=$(gem environment gemdir)/bin:$PATH
-# fi
-# eval "$(rbenv init - zsh)"
+if [ -d "/opt/homebrew/opt/ruby/bin" ]; then
+  export PATH=/opt/homebrew/opt/ruby/bin:$PATH
+  export PATH=$(gem environment gemdir)/bin:$PATH
+fi
+if command -v rbenv 1>/dev/null 2>&1; then
+  eval "$(rbenv init - zsh)"
+fi
 
 # python
 # export PYENV_ROOT="$HOME/.pyenv"

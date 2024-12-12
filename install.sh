@@ -19,7 +19,7 @@ dotfiles=(
     .gitconfig
     .gitconfig.includes
     .gitconfig.local
-    bin
+    # bin
     # rails
     .railsrc
     rails_template.rb
