@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 # Install Homebrew & apps
-
 if ! command -v brew &>/dev/null; then
    echo "Installing Homebrew..."
    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
@@ -22,6 +21,7 @@ apps=(
    wifi-password # Get wifi password CLI
    fnm           # https://github.com/Schniz/fnm
    rbenv         # https://github.com/rbenv/rbenv
+   mas           # https://github.com/mas-cli/mas
 )
 
 for app in "${apps[@]}"; do

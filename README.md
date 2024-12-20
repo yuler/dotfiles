@@ -5,6 +5,7 @@
 - [install.sh](./install.sh) link special dotfiles to home directory
 - [brew.sh](./brew.sh) install cli & gui tools
 - [npms.sh](./npms.sh) install npm cli packages to global
+- [mas.sh](./mas.sh) install apps from the Mac App Store
 
 ## VSCode Snippets
 
