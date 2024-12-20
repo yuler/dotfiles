@@ -2,6 +2,7 @@
 
 --database=sqlite3
 --css=tailwind
+--js=bun
 --skip-bundle
 
 --skip-javascript [due to --api]

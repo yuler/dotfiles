@@ -18,7 +18,8 @@ gem "kamal", require: false
 
 # Front-end
 gem "propshaft"
-gem "importmap-rails"
+gem "jsbundling-rails"
+gem "cssbundling-rails"
 gem "turbo-rails"
 gem "stimulus-rails"
 gem "tailwindcss-rails"
