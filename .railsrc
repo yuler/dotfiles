@@ -1,8 +1,5 @@
 # refs: https://guides.rubyonrails.org/command_line.html#rails-new
 
---database=sqlite3
---css=tailwind
---js=bun
 --skip-bundle
 
 --skip-javascript [due to --api]

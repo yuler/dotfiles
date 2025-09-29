@@ -5,10 +5,11 @@ source "https://rubygems.org"
 
 ruby file: ".ruby-version"
 
-gem "rails", "~> 8.0.0"
+gem "rails", "~> 8.0.2", ">= 8.0.2.1"
 
 # Drivers
-gem "sqlite3", ">= 2.1"
+# gem "sqlite3", ">= 2.1"
+# gem "pg", "~> 1.5"
 
 # Deployment
 gem "puma", ">= 5.0"
@@ -18,11 +19,9 @@ gem "kamal", require: false
 
 # Front-end
 gem "propshaft"
-gem "jsbundling-rails"
-gem "cssbundling-rails"
+gem "importmap-rails"
 gem "turbo-rails"
 gem "stimulus-rails"
-gem "tailwindcss-rails"
 
 # Use the database-backed adapters for Rails.cache, Active Job, and Action Cable
 gem "solid_cache"
@@ -63,22 +62,14 @@ GEM_FILE
 run "echo '#{gem_file}' > Gemfile"
 run "echo '# #{@app_name.titleize}' > README.md"
 
-run "bundle lock --add-platform x86_64-linux"
+# run "bundle lock --add-platform x86_64-linux"
 
 git :init
 git add: "."
-git commit: "-a -m 'Initial commit'"
-
-if yes?("Run `rails generate authentication`?")
-  generate "authentication"
-  rails_command "db:migrate"
-
-  git add: "."
-  git commit: "-a -m 'Add authentication'"
-end
+git commit: %Q{ -m 'Initial commit' }
 
 run <<~COMMANDS
-  echo ''
+  echo 'Run `rails dev`'
   echo ''
   echo '---'
   echo 'cd #{@app_name}'
