@@ -23,7 +23,7 @@ alias dt="cd ~/Desktop"
 alias p="cd ~/Projects"
 
 # NPM Shortcuts
-alias n="$n"
+# alias n="$n"
 # Replace with `@antfu/ni`
 # alias ni="$n install"
 # alias nt="$n test"
