@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+# A simple wrapper around 'git apply' to apply a patch from a remote URL.
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <patch-url>"
+    exit 1
+fi
+
+PATCH_URL="$1"
+
+# if PATCH_URL starts with "https://github.com" and don't end with ".patch" or ".diff"
+# convert it to the corresponding .diff URL
+if [[ "$PATCH_URL" =~ ^https://github\.com/ ]] && [[ ! "$PATCH_URL" =~ \.(patch|diff)$ ]]; then
+    if [[ "$PATCH_URL" =~ /commit/ ]]; then
+        PATCH_URL="${PATCH_URL}.diff"
+    elif [[ "$PATCH_URL" =~ /pull/ ]]; then
+        PATCH_URL="${PATCH_URL}.diff"
+    else
+        echo "Error: Unsupported GitHub URL format. Only pull request URLs are supported."
+        exit 1
+    fi
+fi
+
+curl -sSL "$PATCH_URL" | git apply -v
