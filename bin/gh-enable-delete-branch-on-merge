@@ -4,4 +4,11 @@
 repo=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 
 # Enable "Automatically delete head branches after pull requests are merged"
-gh api -X PATCH "repos/$repo" -f delete_branch_on_merge=true
+delete_branch_on_merge=$(gh api -X PATCH "repos/$repo" -f delete_branch_on_merge=true --jq '.delete_branch_on_merge')
+
+# Echo success & output repo settings url
+if [ "$delete_branch_on_merge" = true ]; then
+  echo "Enabled successfully for $repo"
+else
+  echo "Failed to enable for $repo, Please manually enable it at https://github.com/$repo/settings#merge-button-settings"
+fi
