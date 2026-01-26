@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# Get repo
+repo=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+
+# Enable "Automatically delete head branches after pull requests are merged"
+gh api -X PATCH "repos/$repo" -f delete_branch_on_merge=true
