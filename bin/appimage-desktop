@@ -1,0 +1,42 @@
+#!/bin/bash
+
+# Check if an argument is provided
+if [ -z "$1" ]; then
+    echo "Usage: $0 <path-to-appimage>"
+    exit 1
+fi
+
+app_path="$1"
+filename=$(basename "$app_path")
+# Extract name before the first dot (assuming AppImage naming convention)
+# or just the name if there's no dot before .AppImage
+app_name="${filename%%.*}"
+
+# Ensure ~/Applications directory exists
+mkdir -p "$HOME/Applications"
+
+# Copy to ~/Applications/
+cp "$app_path" "$HOME/Applications/"
+chmod +x "$HOME/Applications/$filename"
+
+# Create local desktop entry path
+desktop_dir="$HOME/.local/share/applications"
+mkdir -p "$desktop_dir"
+
+# Generate the .desktop file
+desktop_file="$desktop_dir/${app_name}.desktop"
+
+cat <<EOF > "$desktop_file"
+[Desktop Entry]
+Name=${app_name}
+Comment=AppImage Application
+Exec=$HOME/Applications/$filename --no-sandbox
+Icon=
+Type=Application
+Categories=Utility;
+Terminal=false
+EOF
+
+echo "✓ AppImage copied to ~/Applications/$filename"
+echo "✓ Desktop entry created at $desktop_file"
+echo "You can now find $app_name in your application menu."
