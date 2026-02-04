@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+
+set -e
+
+main() {
+  local package=$1
+
+  if ! [[ $package ]]; then
+    cat << EOF
+usage:
+  $0 <package-name>
+
+Creates a folder named <package-name> with index.js, package.json, and bin/cli.js, then runs npm publish.
+EOF
+    exit 1
+  fi
+
+  if [[ -d "$package" ]]; then
+    echo "Directory $package already exists. Aborting."
+    exit 1
+  fi
+
+  mkdir -p "$package/bin"
+  cd "$package"
+
+  cat > index.js << 'INDEX'
+export hi = () => {
+  return "hi";
+};
+INDEX
+
+  cat > bin/cli.js << 'CLI'
+#!/usr/bin/env node
+import { hi } from "../index.js";
+console.log(hi());
+CLI
+
+  cat > package.json << JSON
+{
+  "name": "$package",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "index.js",
+  "author": "yuler <is.yuler@gmail.com> (https://yuler.dev)",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test index.js"
+  }
+}
+JSON
+
+  echo "Created package in $package/"
+  echo "npm publish --access public"
+  npm publish --access public
+  echo "Done"
+  cd ..
+}
+
+main "$@"
