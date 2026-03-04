@@ -11,9 +11,6 @@ proxy = http://127.0.0.1:7890
 [pull]
 rebase = true
 
-[include]
-path = ~/.gitconfig.includes
-
 [core]
 ignorecase = false
 pager = delta # refs: https://github.com/dandavison/delta
@@ -24,3 +21,6 @@ pager = delta # refs: https://github.com/dandavison/delta
 	useHttpPath = true
 [credential]
 	helper = osxkeychain
+
+[include]
+path = ~/.gitconfig.includes
