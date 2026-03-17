@@ -89,3 +89,21 @@ gwd() {
     fi
   fi
 }
+
+# Use opencode free model to commit the changes
+aicommit() {
+  # Check exist changes to commit, Auto add all if not staged
+  if git diff --cached --exit-code > /dev/null; then
+    gaa
+  fi
+
+
+  # If also don't exist any changes after add all, return
+  if git diff --cached --exit-code > /dev/null; then
+    echo "No changes to commit"
+    return
+  fi
+
+  opencode run /git-commit
+  gpo
+}
