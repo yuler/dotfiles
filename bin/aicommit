@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+# Use opencode free model to commit the changes.
+#
+# Note: this is an executable script (not a sourced shell function), so we
+# cannot rely on shell aliases like `gaa`/`gpo`. Call `git` directly.
+
+if git diff --cached --exit-code > /dev/null; then
+  git add --all
+fi
+
+# If still no staged changes, don't run opencode.
+if git diff --cached --exit-code > /dev/null; then
+  echo "No changes to commit"
+  exit 0
+fi
+
+opencode run /git-commit
+
+branch="$(git branch --show-current 2>/dev/null || true)"
+if [[ -z "$branch" ]]; then
+  echo "No current branch found; skipping push"
+  exit 0
+fi
+
+git push origin "$branch"
+

@@ -20,8 +20,8 @@ pager = delta # refs: https://github.com/dandavison/delta
 [credential "https://github.com"]
 	useHttpPath = true
 # Note: This config is for macOS, you can override it in .gitconfig.local
-[credential]
-	helper = osxkeychain
+# [credential]
+# 	helper = osxkeychain
 
 [include]
 path = ~/.gitconfig.includes
