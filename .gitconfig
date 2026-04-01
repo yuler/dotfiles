@@ -5,6 +5,9 @@ email = is.yuler@gmail.com
 [init]
 defaultBranch = main
 
+[http]
+postBuffer = 100000000
+
 [http "https://github.com"]
 proxy = http://127.0.0.1:7890
 
@@ -14,14 +17,16 @@ rebase = true
 [core]
 ignorecase = false
 pager = delta # refs: https://github.com/dandavison/delta
+compression = 1
 
-# [credential "https://github.com"]
-# helper = !/usr/local/bin/gh auth git-credential
 [credential "https://github.com"]
-	useHttpPath = true
-# Note: This config is for macOS, you can override it in .gitconfig.local
-# [credential]
-# 	helper = osxkeychain
+useHttpPath = true
+helper = 
+helper = !/usr/bin/gh auth git-credential
+
+[credential "https://gist.github.com"]
+helper = 
+helper = !/usr/bin/gh auth git-credential
 
 [include]
 path = ~/.gitconfig.includes
