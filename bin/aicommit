@@ -5,17 +5,54 @@
 # Note: this is an executable script (not a sourced shell function), so we
 # cannot rely on shell aliases like `gaa`/`gpo`. Call `git` directly.
 
-if git diff --cached --exit-code > /dev/null; then
+usage() {
+  echo "Usage: aicommit [-p|--push]"
+  echo "  -p, --push   Push current branch after commit"
+}
+
+parse_args() {
+  SHOULD_PUSH=false
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -p|--push)
+        SHOULD_PUSH=true
+        ;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        echo "Unknown option: $1"
+        usage
+        exit 1
+        ;;
+    esac
+    shift
+  done
+}
+
+has_staged_changes() {
+  ! git diff --cached --quiet
+}
+
+parse_args "$@"
+
+if ! has_staged_changes; then
   git add --all
 fi
 
 # If still no staged changes, don't run opencode.
-if git diff --cached --exit-code > /dev/null; then
+if ! has_staged_changes; then
   echo "No changes to commit"
   exit 0
 fi
 
 opencode run /git-commit
+
+if [[ "$SHOULD_PUSH" != true ]]; then
+  exit 0
+fi
 
 branch="$(git branch --show-current 2>/dev/null || true)"
 if [[ -z "$branch" ]]; then
