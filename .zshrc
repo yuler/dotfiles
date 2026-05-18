@@ -42,13 +42,13 @@ eval "$(fnm env --use-on-cd)"
 # eval "$(pyenv init -)"
 
 # ruby
-if [ -d "/opt/homebrew/opt/ruby/bin" ]; then
-  export PATH=/opt/homebrew/opt/ruby/bin:$PATH
-  export PATH=$(gem environment gemdir)/bin:$PATH
-fi
-if command -v rbenv 1>/dev/null 2>&1; then
-  eval "$(rbenv init - zsh)"
-fi
+# if [ -d "/opt/homebrew/opt/ruby/bin" ]; then
+#   export PATH=/opt/homebrew/opt/ruby/bin:$PATH
+#   export PATH=$(gem environment gemdir)/bin:$PATH
+# fi
+# if command -v rbenv 1>/dev/null 2>&1; then
+#   eval "$(rbenv init - zsh)"
+# fi
 
 # python
 # export PYENV_ROOT="$HOME/.pyenv"

@@ -8,7 +8,7 @@
 
 	// Workbench
 	"workbench.startupEditor": "none",
-	"workbench.colorTheme": "Default Dark Modern",
+	"workbench.colorTheme": "Dark Modern",
 	"workbench.settings.editor": "json",
 	"window.zoomLevel": 2,
 
