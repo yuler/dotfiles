@@ -55,16 +55,17 @@ function gh-todo() {
 # Create a new worktree and branch from within current git directory.
 gwa() {
   if [[ -z "$1" ]]; then
-    echo "Usage: gwa [branch name]"
+    echo "Usage: gwa <branch name> [base branch (default: origin/main)]"
     return
     # exit 1
   fi
 
   local branch="$1"
+  local base_branch="${2:-origin/main}"
   local base="$(basename "$PWD")"
   local path="../${base}--${branch}"
 
-  git worktree add -b "$branch" "$path"
+  git worktree add -b "$branch" "$path" "$base_branch"
   mise trust "$path"
   cd "$path"
 }
