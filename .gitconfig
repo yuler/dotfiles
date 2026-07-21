@@ -30,3 +30,7 @@ helper = !/usr/bin/gh auth git-credential
 
 [include]
 path = ~/.gitconfig.includes
+[credential]
+	helper = store
+[safe]
+	directory = *

@@ -1,13 +1,28 @@
 #!/usr/bin/env bash
 
-# Use opencode free model to commit the changes.
+# AI-assisted git commit.
 #
-# Note: this is an executable script (not a sourced shell function), so we
-# cannot rely on shell aliases like `gaa`/`gpo`. Call `git` directly.
+# Default: try opencode (free model), fall back to cursor-agent when opencode
+# hangs or fails. Note: this is an executable script (not a sourced shell
+# function), so we cannot rely on shell aliases like `gaa`/`gpo`.
+
+OPENCODE_MODEL="${AICOMMIT_MODEL:-opencode/deepseek-v4-flash-free}"
+OPENCODE_TIMEOUT="${AICOMMIT_TIMEOUT:-180}"
+# auto | opencode | cursor-agent
+AICOMMIT_BACKEND="${AICOMMIT_BACKEND:-auto}"
+# cursor-agent | none  (used when backend=auto and opencode fails)
+AICOMMIT_FALLBACK="${AICOMMIT_FALLBACK:-cursor-agent}"
+LOCK_FILE="${AICOMMIT_LOCK_FILE:-${XDG_RUNTIME_DIR:-/tmp}/aicommit.lock}"
 
 usage() {
   echo "Usage: aicommit [-p|--push]"
   echo "  -p, --push   Push current branch after commit"
+  echo ""
+  echo "Environment:"
+  echo "  AICOMMIT_BACKEND   auto (default), opencode, or cursor-agent"
+  echo "  AICOMMIT_FALLBACK  cursor-agent (default) or none"
+  echo "  AICOMMIT_MODEL     opencode model (default: opencode/deepseek-v4-flash-free)"
+  echo "  AICOMMIT_TIMEOUT   opencode timeout in seconds (default: 180)"
 }
 
 parse_args() {
@@ -32,23 +47,161 @@ parse_args() {
   done
 }
 
+require_git_repo() {
+  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "Not inside a git repository. Run aicommit from a project directory."
+    exit 1
+  fi
+}
+
 has_staged_changes() {
   ! git diff --cached --quiet
 }
 
+find_git_commit_skill_dir() {
+  local candidate
+  for candidate in \
+    ".agents/skills/git-commit" \
+    "$HOME/.agents/skills/git-commit" \
+    "$HOME/.claude/skills/git-commit" \
+    "$HOME/.config/opencode/skills/git-commit"; do
+    if [[ -f "$candidate/SKILL.md" && -f "$candidate/scripts/git-diff.sh" ]]; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+  done
+  return 1
+}
+
+cleanup_stale_opencode() {
+  local pid
+  while read -r pid; do
+    [[ -z "$pid" ]] && continue
+    kill -9 "$pid" 2>/dev/null || true
+  done < <(pgrep -f 'opencode.*run' 2>/dev/null || true)
+}
+
+run_opencode() {
+  if ! command -v opencode >/dev/null 2>&1; then
+    echo "opencode not found in PATH"
+    return 127
+  fi
+
+  cleanup_stale_opencode
+
+  local -a runner=()
+  if [[ -t 0 && -t 1 ]]; then
+    runner=(opencode --pure --model "$OPENCODE_MODEL" --agent build run /git-commit)
+  elif command -v script >/dev/null 2>&1; then
+    runner=(script -q -c "opencode --pure --model \"$OPENCODE_MODEL\" --agent build run /git-commit" /dev/null)
+  else
+    echo "opencode needs a terminal. Install 'script' or run from an interactive shell."
+    return 1
+  fi
+
+  local status=0
+  if ! timeout "$OPENCODE_TIMEOUT" "${runner[@]}"; then
+    status=$?
+    if [[ $status -eq 124 ]]; then
+      echo "opencode timed out after ${OPENCODE_TIMEOUT}s"
+    else
+      echo "opencode failed (exit $status)"
+    fi
+    cleanup_stale_opencode
+    return "$status"
+  fi
+
+  return 0
+}
+
+run_cursor_agent() {
+  local skill_dir
+  if ! skill_dir="$(find_git_commit_skill_dir)"; then
+    echo "git-commit skill not found (checked .agents, ~/.agents, ~/.claude, ~/.config/opencode)"
+    return 1
+  fi
+
+  if ! command -v cursor-agent >/dev/null 2>&1; then
+    echo "cursor-agent not found in PATH"
+    return 127
+  fi
+
+  cursor-agent -p --force \
+    "Follow ${skill_dir}/SKILL.md. Run bash ${skill_dir}/scripts/git-diff.sh, then commit staged changes with an emoji message per the skill. Do not push."
+}
+
+commit_succeeded() {
+  ! has_staged_changes
+}
+
+run_commit_backend() {
+  case "$AICOMMIT_BACKEND" in
+    opencode)
+      run_opencode || true
+      if commit_succeeded; then
+        return 0
+      fi
+      echo "opencode finished but staged changes remain"
+      return 1
+      ;;
+    cursor-agent)
+      run_cursor_agent || return 1
+      if commit_succeeded; then
+        return 0
+      fi
+      echo "cursor-agent finished but staged changes remain"
+      return 1
+      ;;
+    auto)
+      run_opencode || true
+      if commit_succeeded; then
+        return 0
+      fi
+
+      if [[ "$AICOMMIT_FALLBACK" != "cursor-agent" ]]; then
+        echo "commit failed and fallback is disabled"
+        return 1
+      fi
+
+      echo "Falling back to cursor-agent..."
+      run_cursor_agent || return 1
+      if commit_succeeded; then
+        return 0
+      fi
+      echo "cursor-agent finished but staged changes remain"
+      return 1
+      ;;
+    *)
+      echo "Unknown AICOMMIT_BACKEND: $AICOMMIT_BACKEND (use auto, opencode, or cursor-agent)"
+      return 1
+      ;;
+  esac
+}
+
+acquire_lock() {
+  exec 9>"$LOCK_FILE"
+  if ! flock -n 9; then
+    echo "Another aicommit is already running"
+    exit 1
+  fi
+}
+
 parse_args "$@"
+require_git_repo
+acquire_lock
 
 if ! has_staged_changes; then
   git add --all
 fi
 
-# If still no staged changes, don't run opencode.
 if ! has_staged_changes; then
   echo "No changes to commit"
   exit 0
 fi
 
-opencode run /git-commit
+if ! run_commit_backend; then
+  exit 1
+fi
 
 if [[ "$SHOULD_PUSH" != true ]]; then
   exit 0
@@ -61,4 +214,3 @@ if [[ -z "$branch" ]]; then
 fi
 
 git push origin "$branch"
-
