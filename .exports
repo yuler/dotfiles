@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
 # Make vim the default editor.
-export EDITOR='vim'
-export n='pnpm'
+# export EDITOR='vim'
+# export n='pnpm'
 export DOCKER_HOST=unix:///var/run/docker.sock
