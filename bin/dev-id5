@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+session_name="id5"
+company_dir="$HOME/Company"
+
+if ! tmux has-session -t "$session_name" 2>/dev/null; then
+  # Window 1: ~/Company with a vertical split (two panes)
+  tmux new-session -d -s "$session_name" -n 'company' -c "$company_dir"
+  tmux split-window -h -t "$session_name:company" -c "$company_dir"
+  tmux split-window -v -t "$session_name:company" -c "$company_dir"
+  tmux select-pane -t "$session_name:company.0"
+
+  # Window 2: mall
+  tmux new-window -t "$session_name" -n 'mall' -c "$company_dir/mall"
+  tmux send-keys -t "$session_name:mall" 'tdl mimo agent' C-m
+
+  # Window 3: zhsq
+  tmux new-window -t "$session_name" -n 'zhsq' -c "$company_dir/zhsq"
+  tmux send-keys -t "$session_name:zhsq" 'tdl mimo agent' C-m
+
+  # Window 4: timeway
+  tmux new-window -t "$session_name" -n 'timeway' -c "$company_dir/timeway"
+  tmux send-keys -t "$session_name:timeway" 'tdl mimo agent' C-m
+
+  tmux select-window -t "$session_name:company"
+fi
+
+tmux attach-session -t "$session_name"
