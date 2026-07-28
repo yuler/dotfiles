@@ -14,7 +14,7 @@ if ! tmux has-session -t "$session_name" 2>/dev/null; then
   # Remaining windows: one tab per folder, tdl with mimo + agent
   for folder in "${folders[@]}"; do
     win_id=$(tmux new-window -t "$session_name" -n "$folder" -c "$company_dir/$folder" -P -F '#{window_id}')
-    tmux send-keys -t "$win_id" 'tdl mimo agent' C-m
+    tmux send-keys -t "$win_id" 'tdl opencode cursor-agent' C-m
   done
 
   tmux select-window -t "$session_name:company"
