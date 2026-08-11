@@ -34,3 +34,7 @@ path = ~/.gitconfig.includes
 	helper = store
 [safe]
 	directory = *
+
+[includeIf "gitdir:~/Company/"]
+	path = ~/.gitconfig.company
+
