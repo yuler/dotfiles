@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# OPEN VPN
+#
+# `UniVPN`
+
+
+JUMP_HOST="<JUMP_HOST>"
+JUMP_USERANME="<JUMP_USERNAME>"
+JUMP_PASSWORD="<JUMP_PASSWORD>"
+# 动态口令
+
+jump_username_list=(
+    "<JUMP_USERNAME>"
+    "<JUMP_USERNAME>"
+    "<JUMP_USERNAME>"
+    "<JUMP_USERNAME>"
+    "<JUMP_USERNAME>"
+)
+
+host_ip_list=(
+    "<HOST_IP_1>"
+    "<HOST_IP_2>"
+    "<HOST_IP_3>"
+    "<HOST_IP_4>"
+    "<HOST_IP_5>"
+)
+
+host_user_list=(
+    "<HOST_USER>" # 1
+    "<HOST_USER>" # 2
+    "<HOST_USER>" # 3
+    "<HOST_USER>" # 4
+    "<HOST_USER>" # 5
+)
+
+host_password_list=(
+    '<HOST_PASSWORD_1>'  # 1
+    '<HOST_PASSWORD_2>'  # 2
+    '<HOST_PASSWORD_3>'  # 3
+    '<HOST_PASSWORD_4>'  # 4
+    '<HOST_PASSWORD_5>'  # 5
+)
+
+echo "Choose a target host:"
+for i in "${!host_ip_list[@]}"; do
+    printf "%d) %s\n" "$((i + 1))" "${host_ip_list[$i]}"
+done
+
+read -rp "Select [1-${#host_ip_list[@]}]: " choice
+if [[ ! "$choice" =~ ^[0-9]+$ ]] || (( choice < 1 || choice > ${#host_ip_list[@]} )); then
+    echo "Invalid selection: $choice" >&2
+    exit 1
+fi
+
+idx=$((choice - 1))
+jump_username="${jump_username_list[$idx]}"
+target_ip="${host_ip_list[$idx]}"
+target_user="${host_user_list[$idx]}"
+target_password="${host_password_list[$idx]}"
+export JUMP_HOST JUMP_PASSWORD target_ip target_user target_password
+export JUMP_USERNAME="$jump_username"
+
+expect -c "$(cat <<'EOF'
+set timeout -1
+
+set jump_host $env(JUMP_HOST)
+set jump_password $env(JUMP_PASSWORD)
+set jump_username $env(JUMP_USERNAME)
+set target_ip $env(target_ip)
+set target_user $env(target_user)
+set target_password $env(target_password)
+
+spawn ssh -o HostKeyAlgorithms=+ssh-rsa \
+    -o PubkeyAcceptedAlgorithms=+ssh-rsa \
+    -o PreferredAuthentications=password \
+    -o PubkeyAuthentication=no \
+    -o GSSAPIAuthentication=no \
+    $jump_username@$jump_host
+
+expect {
+    -re "(?i)yes/no" {
+        send "yes\r"
+        exp_continue
+    }
+    -re "(?i)password:" {
+        send "$jump_password\r"
+    }
+    timeout {
+        puts "Timed out waiting for jump login password prompt."
+        exit 1
+    }
+}
+
+expect {
+    -re "(?i)server username.*:" {
+        send "$target_user\r"
+        exp_continue
+    }
+    -re "(?i)server password.*:" {
+        send "$target_password\r"
+        # Give the remote side a moment to consume login output, then hand over control.
+        set timeout 3
+        expect {
+            -re {[$#>] $} {}
+            -re "(?i)last login|welcome|success" {}
+            timeout {}
+            eof { exit 1 }
+        }
+        set timeout -1
+        interact
+    }
+    eof {
+        exit 1
+    }
+    timeout {
+        puts "Timed out waiting for target server prompts."
+        exit 1
+    }
+}
+EOF
+)"

@@ -5,3 +5,5 @@
 .gitconfig.includes
 .gitconfig.local
 .gitconfig.*.local
+
+bin/jump-login
