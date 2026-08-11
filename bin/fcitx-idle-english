@@ -1,0 +1,230 @@
+#!/usr/bin/env bash
+# Auto-deactivate fcitx5 Chinese after keyboard idle (pure bash).
+#
+# When fcitx5 is active (state 2 = Chinese), and no keyboard event has
+# arrived for IDLE_SEC seconds, run `fcitx5-remote -c` (English).
+# Does NOT synthesize Shift — uses the official fcitx CLI.
+#
+# Environment:
+#   FCITX_IDLE_ENGLISH_SEC      Idle timeout seconds (default: 120)
+#   FCITX_IDLE_ENGLISH_NOTIFY   1/true to notify-send on switch (default: 1)
+#   FCITX_IDLE_ENGLISH_POLL     State poll interval seconds (default: 2)
+#
+# Placement (Omarchy):
+#   ~/Projects/dotfiles/bin/fcitx-idle-english
+#   exec-once in ~/.config/hypr/autostart.conf
+
+set -euo pipefail
+
+IDLE_SEC="${FCITX_IDLE_ENGLISH_SEC:-120}"
+POLL_SEC="${FCITX_IDLE_ENGLISH_POLL:-2}"
+NOTIFY="${FCITX_IDLE_ENGLISH_NOTIFY:-1}"
+
+if (( IDLE_SEC < 5 )); then
+  IDLE_SEC=5
+fi
+
+RUNTIME="${XDG_RUNTIME_DIR:-/tmp}"
+LOCK_FILE="$RUNTIME/fcitx-idle-english.lock"
+STAMP_FILE="$RUNTIME/fcitx-idle-english.stamp"
+LOG_TAG="fcitx-idle-english"
+
+log() {
+  printf '[%s] %s\n' "$LOG_TAG" "$*" >&2
+}
+
+# Single instance via flock on fd 9
+exec 9>"$LOCK_FILE"
+if ! flock -n 9; then
+  log "another instance is already running; exiting"
+  exit 0
+fi
+printf '%s\n' $$ >&9
+
+# Temp dir for watcher pids; cleaned on exit
+WATCH_DIR="$(mktemp -d "$RUNTIME/fcitx-idle-english.XXXXXX")"
+cleanup() {
+  local pid
+  if [[ -d $WATCH_DIR ]]; then
+    for pidfile in "$WATCH_DIR"/*.pid; do
+      [[ -f $pidfile ]] || continue
+      pid=$(<"$pidfile")
+      kill "$pid" 2>/dev/null || true
+    done
+    rm -rf "$WATCH_DIR"
+  fi
+}
+trap cleanup EXIT INT TERM
+
+touch_stamp() {
+  # monotime-ish: epoch seconds is fine for idle of minutes
+  date +%s >"$STAMP_FILE"
+}
+
+notify() {
+  case "${NOTIFY,,}" in
+    1 | true | yes | on) ;;
+    *) return 0 ;;
+  esac
+  notify-send -u low -a Fcitx "输入法" "$1" 2>/dev/null || true
+}
+
+# List /dev/input/event* that look like real keyboards.
+list_keyboards() {
+  local name="" handlers="" event dev lowered s
+  local -a skip=(
+    speaker "video bus" "power button" "sleep button" "lid switch"
+    hdmi headphone mic "line out" "line in" "pc speaker"
+    touchpad trackpoint
+  )
+
+  emit_if_keyboard() {
+    [[ -n $handlers ]] || return 0
+    event=""
+    for event in $handlers; do
+      [[ $event == event* ]] && break
+      event=""
+    done
+    [[ -n $event ]] || return 0
+    dev="/dev/input/$event"
+    [[ -e $dev && -r $dev ]] || return 0
+
+    lowered=$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')
+    for s in "${skip[@]}"; do
+      [[ $lowered == *"$s"* ]] && return 0
+    done
+    # Pure mouse (keep "XXX Keyboard" side-key devices)
+    if [[ $lowered == *mouse* && $lowered != *keyboard* ]]; then
+      return 0
+    fi
+    if [[ " $handlers " != *" kbd "* && $lowered != *keyboard* ]]; then
+      return 0
+    fi
+    printf '%s\n' "$dev"
+  }
+
+  # /proc/bus/input/devices: records separated by blank lines
+  while IFS= read -r line || [[ -n $line ]]; do
+    if [[ -z $line ]]; then
+      emit_if_keyboard
+      name=""
+      handlers=""
+      continue
+    fi
+    case "$line" in
+      "N: Name="*) name="${line#N: Name=}" ;;
+      "H: Handlers="*) handlers="${line#H: Handlers=}" ;;
+    esac
+  done < /proc/bus/input/devices
+  # Last block may lack trailing blank line
+  emit_if_keyboard
+}
+
+# Background: any 24-byte input_event on a keyboard device = activity.
+# We do not parse EV_KEY; keyboard devices only emit bursts when used.
+start_watchers() {
+  local dev i=0
+  # Stop old watchers
+  cleanup_watchers_only
+
+  while IFS= read -r dev; do
+    [[ -n $dev ]] || continue
+    (
+      # Each successful read means the device produced events
+      while dd if="$dev" of=/dev/null bs=24 count=1 status=none 2>/dev/null; do
+        touch_stamp
+      done
+    ) &
+    echo $! >"$WATCH_DIR/$i.pid"
+    log "watching $dev (pid $!)"
+    i=$((i + 1))
+  done < <(list_keyboards)
+
+  if (( i == 0 )); then
+    log "no readable keyboard devices; need membership in group 'input'?"
+  fi
+}
+
+cleanup_watchers_only() {
+  local pidfile pid
+  for pidfile in "$WATCH_DIR"/*.pid; do
+    [[ -f $pidfile ]] || continue
+    pid=$(<"$pidfile")
+    kill "$pid" 2>/dev/null || true
+    rm -f "$pidfile"
+  done
+}
+
+fcitx_state() {
+  # Prints 0/1/2 or empty if fcitx is down
+  local out
+  out=$(fcitx5-remote 2>/dev/null || true)
+  if [[ $out =~ ^[012]$ ]]; then
+    printf '%s\n' "$out"
+  fi
+}
+
+fcitx_deactivate() {
+  fcitx5-remote -c 2>/dev/null
+}
+
+# --- main ---
+
+log "started (idle=${IDLE_SEC}s, poll=${POLL_SEC}s, notify=${NOTIFY})"
+
+# Wait for fcitx at login
+for _ in $(seq 1 60); do
+  if [[ -n $(fcitx_state) ]]; then
+    break
+  fi
+  sleep 1
+done
+
+touch_stamp
+start_watchers
+
+was_active=0
+rescan_every=30
+loops_since_scan=0
+
+while true; do
+  loops_since_scan=$((loops_since_scan + 1))
+  if (( loops_since_scan >= rescan_every )); then
+    start_watchers
+    loops_since_scan=0
+  fi
+
+  state=$(fcitx_state || true)
+  if [[ -z $state ]]; then
+    sleep "$POLL_SEC"
+    continue
+  fi
+
+  if [[ $state == 2 ]]; then
+    if (( was_active == 0 )); then
+      # Just entered Chinese — arm idle from now
+      touch_stamp
+      log "Chinese active; idle timer armed"
+      was_active=1
+    fi
+
+    now=$(date +%s)
+    last=$(cat "$STAMP_FILE" 2>/dev/null || echo "$now")
+    idle_for=$((now - last))
+
+    if (( idle_for >= IDLE_SEC )); then
+      if fcitx_deactivate; then
+        log "auto-switched to English after ${idle_for}s idle"
+        notify "已自动切换到英文输入"
+        was_active=0
+        touch_stamp
+      else
+        log "fcitx5-remote -c failed; will retry"
+      fi
+    fi
+  else
+    was_active=0
+  fi
+
+  sleep "$POLL_SEC"
+done
