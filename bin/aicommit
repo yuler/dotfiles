@@ -6,7 +6,7 @@
 # if all fail, exit with error. Note: this is an executable script (not a
 # sourced shell function), so we cannot rely on shell aliases like `gaa`/`gpo`.
 
-OPENCODE_MODEL="${AICOMMIT_MODEL:-opencode/deepseek-v4-flash-free}"
+OPENCODE_MODEL="${AICOMMIT_MODEL:-}"
 AICOMMIT_AGENT_TIMEOUT="${AICOMMIT_AGENT_TIMEOUT:-180}"
 LOCK_FILE="${AICOMMIT_LOCK_FILE:-${XDG_RUNTIME_DIR:-/tmp}/aicommit.lock}"
 
@@ -15,7 +15,7 @@ usage() {
   echo "  -p, --push   Push current branch after commit"
   echo ""
   echo "Environment:"
-  echo "  AICOMMIT_MODEL           opencode model (default: opencode/deepseek-v4-flash-free)"
+  echo "  AICOMMIT_MODEL           opencode model override (default: unset → opencode's default model)"
   echo "  AICOMMIT_AGENT_TIMEOUT   agent timeout in seconds (default: 180)"
 }
 
@@ -88,11 +88,16 @@ agent_opencode() {
 
   cleanup_stale_opencode
 
+  local -a model_flag=()
+  if [[ -n "$OPENCODE_MODEL" ]]; then
+    model_flag=(--model "$OPENCODE_MODEL")
+  fi
+
   local -a runner=()
   if [[ -t 0 && -t 1 ]]; then
-    runner=(opencode --pure --model "$OPENCODE_MODEL" --agent build run /git-commit)
+    runner=(opencode --pure "${model_flag[@]}" --agent build run /git-commit)
   elif command -v script >/dev/null 2>&1; then
-    runner=(script -q -c "opencode --pure --model \"$OPENCODE_MODEL\" --agent build run /git-commit" /dev/null)
+    runner=(script -q -c "opencode --pure ${OPENCODE_MODEL:+--model \"$OPENCODE_MODEL\"} --agent build run /git-commit" /dev/null)
   else
     echo "opencode needs a terminal. Install 'script' or run from an interactive shell."
     return 1
