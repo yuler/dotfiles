@@ -1,36 +1,24 @@
 #!/usr/bin/env bash
 # fcitx-idle-english — auto-switch Rime Chinese → English after keyboard idle.
 #
-# Generated with AI assistance; tested on Omarchy (Hyprland) with fcitx5 + Rime
-# Chinese input (Shift toggles Rime ascii_mode 中/英, not fcitx activate/
-# deactivate).
+# Omarchy (Hyprland) + fcitx5 + Rime: Shift toggles Rime ascii_mode 中/英,
+# not fcitx activate/deactivate.
 #
-# How it works
-# ------------
-# 1. Poll Rime over D-Bus (`IsAsciiMode`). When Chinese (ascii=false), arm an
-#    idle timer from a stamp file under $XDG_RUNTIME_DIR.
-# 2. Keep the stamp fresh on real activity:
-#      • Primary on Omarchy: /dev/input EV_KEY (most apps use wayland_v2, so
-#        fcitx InputContext D-Bus signals are not eavesdroppable).
-#      • Best-effort: gdbus monitor for UpdateFormattedPreedit / CommitString /
-#        ForwardKey / UpdateClientSideUI (only dbus-frontend clients emit these).
-# 3. Each poll: if still Chinese and idle >= IDLE_SEC, call SetAsciiMode(true)
-#    and optionally notify-send.
+# 1. Poll Rime `IsAsciiMode`. When Chinese (ascii=false), arm an idle timer
+#    from a stamp file under $XDG_RUNTIME_DIR.
+# 2. Refresh the stamp on real EV_KEY (press / release / autorepeat).
+#    Most apps use wayland_v2, so fcitx InputContext D-Bus is not used.
+# 3. If still Chinese and idle >= IDLE_SEC → SetAsciiMode(true).
 # 4. Singleton via flock; keyboard devices are rescanned periodically.
 #
-# Composition caveat
-# ------------------
-# Rime D-Bus has no IsComposing. The composing-file deferral only works when
-# UpdateFormattedPreedit is visible (dbus frontend). Under wayland_v2 +
-# classicui (typical Omarchy apps: terminal, browser, Cursor, WeChat), pausing
-# mid-preedit/candidate with no key events still ages the idle timer and may
-# switch English and clear composition.
+# Pausing mid-preedit with no key events still ages the timer and may switch
+# English (Rime has no IsComposing on D-Bus).
 #
 # Env:
 #   FCITX_IDLE_ENGLISH_SEC     idle seconds (default: 60)
 #   FCITX_IDLE_ENGLISH_POLL    poll seconds (default: 1)
 #   FCITX_IDLE_ENGLISH_NOTIFY  notify-send on switch (default: 1)
-#   FCITX_IDLE_ENGLISH_DEBUG   verbose logs (default: 0)
+#   FCITX_IDLE_ENGLISH_DEBUG   verbose logs (default: 1)
 #
 # Omarchy: exec-once from ~/.config/hypr/autostart.conf
 
@@ -43,7 +31,7 @@ set -euo pipefail
 IDLE_SEC="${FCITX_IDLE_ENGLISH_SEC:-60}"
 POLL_SEC="${FCITX_IDLE_ENGLISH_POLL:-1}"
 NOTIFY="${FCITX_IDLE_ENGLISH_NOTIFY:-1}"
-DEBUG="${FCITX_IDLE_ENGLISH_DEBUG:-0}"
+DEBUG="${FCITX_IDLE_ENGLISH_DEBUG:-1}"
 
 case "${DEBUG,,}" in 1 | true | yes | on) DEBUG=1 ;; *) DEBUG=0 ;; esac
 case "${NOTIFY,,}" in 1 | true | yes | on) NOTIFY=1 ;; *) NOTIFY=0 ;; esac
@@ -52,11 +40,10 @@ case "${NOTIFY,,}" in 1 | true | yes | on) NOTIFY=1 ;; *) NOTIFY=0 ;; esac
 RUNTIME="${XDG_RUNTIME_DIR:-/tmp}"
 LOCK_FILE="$RUNTIME/fcitx-idle-english.lock"
 STAMP_FILE="$RUNTIME/fcitx-idle-english.stamp"
-COMPOSING_FILE="$RUNTIME/fcitx-idle-english.composing"
 WATCH_DIR=""
+MAIN_PID=$$
 LOG_TAG="fcitx-idle-english"
 
-# Linux input.h
 EV_KEY=1
 KEY_UNKNOWN=240
 
@@ -101,18 +88,33 @@ kill_watchers() {
   for pidfile in "$WATCH_DIR"/*.pid; do
     [[ -f $pidfile ]] || continue
     pid=$(<"$pidfile")
-    # Kill process group so pipeline children die with the watcher.
-    kill -- "-$pid" 2>/dev/null || kill "$pid" 2>/dev/null || true
-    pkill -P "$pid" 2>/dev/null || true
     rm -f "$pidfile"
+    [[ -n $pid ]] || continue
+    # Watchers are started under `set -m`, so $pid is its own process-group
+    # leader. Kill the group — never kill the leader first then pkill -P
+    # (children get reparented and survive as orphans).
+    if kill -0 -- "-$pid" 2>/dev/null; then
+      kill -- "-$pid" 2>/dev/null || true
+    elif kill -0 "$pid" 2>/dev/null; then
+      pkill -P "$pid" 2>/dev/null || true
+      kill "$pid" 2>/dev/null || true
+    fi
   done
 }
 
 cleanup() {
+  # Background watchers inherit traps. Only main may tear down WATCH_DIR.
+  # Non-main must exit so SIGTERM from kill_watchers actually stops them.
+  ((BASHPID == MAIN_PID)) || exit 0
   debug "shutdown"
   kill_watchers
   [[ -n $WATCH_DIR && -d $WATCH_DIR ]] && rm -rf "$WATCH_DIR"
-  rm -f "$COMPOSING_FILE"
+  rm -f "$STAMP_FILE.tmp.$$"
+}
+
+shutdown() {
+  cleanup
+  exit 0
 }
 
 # ---------------------------------------------------------------------------
@@ -120,27 +122,20 @@ cleanup() {
 # ---------------------------------------------------------------------------
 
 touch_stamp() {
-  date +%s >"$STAMP_FILE"
+  local now tmp
+  now=$(date +%s)
+  tmp="$STAMP_FILE.tmp.$$"
+  printf '%s\n' "$now" >"$tmp"
+  mv -f "$tmp" "$STAMP_FILE"
   [[ -n ${1:-} ]] && debug "stamp ← $1"
 }
 
 idle_seconds() {
   local now last
   now=$(date +%s)
-  last=$(cat "$STAMP_FILE" 2>/dev/null || echo "$now")
+  last=$(cat "$STAMP_FILE" 2>/dev/null || true)
+  [[ $last =~ ^[0-9]+$ ]] || last=$now
   echo $((now - last))
-}
-
-set_composing() {
-  if [[ $1 == 1 ]]; then
-    echo 1 >"$COMPOSING_FILE"
-  else
-    rm -f "$COMPOSING_FILE"
-  fi
-}
-
-is_composing() {
-  [[ -f $COMPOSING_FILE ]]
 }
 
 # ---------------------------------------------------------------------------
@@ -186,7 +181,6 @@ list_keyboards() {
       return 0
     fi
 
-    # Consumer-control / mouse-keys interfaces (e.g. event4 KEY_UNKNOWN flood)
     if [[ -n $rel && $rel != 0 ]] || [[ -n $abs && $abs != 0 ]]; then
       debug "skip $dev ($name) has REL/ABS (consumer iface)"
       return 0
@@ -213,49 +207,11 @@ list_keyboards() {
 }
 
 # ---------------------------------------------------------------------------
-# Activity watchers
-#
-# Most apps on this machine use fcitx wayland_v2, NOT the D-Bus InputContext
-# frontend — so UpdateFormattedPreedit is not eavesdroppable. Resetting idle
-# on real EV_KEY (including Rime composing keys) is the reliable path.
-# D-Bus monitor is best-effort for the few dbus-frontend clients.
+# Activity watcher (evdev)
 # ---------------------------------------------------------------------------
-
-watch_fcitx_activity() {
-  while true; do
-    debug "fcitx dbus monitor start"
-    gdbus monitor --session --dest "$FCITX_DEST" 2>/dev/null | while IFS= read -r line; do
-      case "$line" in
-        *UpdateFormattedPreedit*)
-          if [[ $line == *"UpdateFormattedPreedit([],"* ]] ||
-            [[ $line == *"UpdateFormattedPreedit([ ],"* ]]; then
-            set_composing 0
-            touch_stamp "fcitx preedit clear"
-          else
-            set_composing 1
-            touch_stamp "fcitx preedit/composing"
-          fi
-          ;;
-        *CommitString*)
-          set_composing 0
-          touch_stamp "fcitx commit"
-          ;;
-        *UpdateClientSideUI*)
-          touch_stamp "fcitx client-ui"
-          ;;
-        *ForwardKey*)
-          touch_stamp "fcitx forward-key"
-          ;;
-      esac
-    done
-    debug "fcitx dbus monitor exited; retry in 1s"
-    sleep 1
-  done
-}
 
 # Keep the device fd open and read one input_event at a time.
 # bash `read -N` → EINVAL on evdev; binary also cannot live in $(...).
-# Write one event to a small file, then parse with od.
 watch_device() {
   local dev="$1"
   local evbin="$WATCH_DIR/ev.$(basename "$dev").bin"
@@ -291,12 +247,12 @@ watch_device() {
     code=$((bytes[18] | (bytes[19] << 8)))
     val=$((bytes[20] | (bytes[21] << 8) | (bytes[22] << 16) | (bytes[23] << 24)))
 
-    # Press/release only — ignore KEY_UNKNOWN spam and autorepeat (value=2).
+    # Press / release / autorepeat. Ignore KEY_UNKNOWN spam.
     ((typ == EV_KEY)) || continue
     ((code != KEY_UNKNOWN)) || continue
-    ((val == 0 || val == 1)) || continue
+    ((val == 0 || val == 1 || val == 2)) || continue
 
-    touch_stamp "key $dev code=$code $([ "$val" -eq 1 ] && echo down || echo up)"
+    touch_stamp "key $dev code=$code val=$val"
   done
 
   exec 3<&-
@@ -308,12 +264,11 @@ start_watchers() {
   local dev i=0 pid
 
   kill_watchers
-  debug "scan keyboards + fcitx dbus"
+  debug "scan keyboards watch_dir=$WATCH_DIR"
 
-  watch_fcitx_activity &
-  pid=$!
-  echo "$pid" >"$WATCH_DIR/fcitx.pid"
-  log "watching fcitx dbus (pid $pid)"
+  # Own process group per watcher so kill_watchers can reap dd children via
+  # `kill -- -$pid`. Without monitor mode, rescans leak orphans.
+  set -m
 
   while IFS= read -r dev; do
     [[ -n $dev ]] || continue
@@ -324,10 +279,12 @@ start_watchers() {
     i=$((i + 1))
   done < <(list_keyboards)
 
+  set +m
+
   if ((i == 0)); then
     log "no readable keyboards (need group 'input'?)"
   else
-    debug "watching $i keyboard device(s) + fcitx dbus"
+    debug "watching $i keyboard device(s)"
   fi
 }
 
@@ -335,39 +292,35 @@ start_watchers() {
 # Rime / fcitx status
 # ---------------------------------------------------------------------------
 
+rime_dbus() {
+  local method="$1"
+  shift
+  gdbus call --session \
+    --dest "$FCITX_DEST" \
+    --object-path "$RIME_PATH" \
+    --method "$RIME_IFACE.$method" "$@" 2>/dev/null
+}
+
 # Returns 0 if Rime is in Chinese (ascii_mode=false).
 rime_is_chinese() {
   local out
-  out=$(gdbus call --session \
-    --dest "$FCITX_DEST" \
-    --object-path "$RIME_PATH" \
-    --method "$RIME_IFACE.IsAsciiMode" 2>/dev/null) || return 1
+  out=$(rime_dbus IsAsciiMode) || return 1
   # gdbus prints "(false,)" or "(true,)"
   [[ $out == *false* ]]
 }
 
 rime_switch_english() {
-  gdbus call --session \
-    --dest "$FCITX_DEST" \
-    --object-path "$RIME_PATH" \
-    --method "$RIME_IFACE.SetAsciiMode" true >/dev/null 2>&1
+  rime_dbus SetAsciiMode true >/dev/null
 }
 
 rime_schema() {
-  gdbus call --session \
-    --dest "$FCITX_DEST" \
-    --object-path "$RIME_PATH" \
-    --method "$RIME_IFACE.GetCurrentSchema" 2>/dev/null |
-    tr -d "()', " || true
+  rime_dbus GetCurrentSchema | tr -d "()', " || true
 }
 
 wait_for_rime() {
   local i
   for i in $(seq 1 60); do
-    if gdbus call --session \
-      --dest "$FCITX_DEST" \
-      --object-path "$RIME_PATH" \
-      --method "$RIME_IFACE.IsAsciiMode" >/dev/null 2>&1; then
+    if rime_dbus IsAsciiMode >/dev/null; then
       debug "rime ready schema=$(rime_schema) chinese=$(rime_is_chinese && echo yes || echo no)"
       return 0
     fi
@@ -400,17 +353,23 @@ main_loop() {
       fi
 
       idle_for=$(idle_seconds)
-      remain=$((IDLE_SEC - idle_for))
-      ((remain < 0)) && remain=0
+      if ((DEBUG)); then
+        remain=$((IDLE_SEC - idle_for))
+        ((remain < 0)) && remain=0
+        debug "zh idle=${idle_for}s remain=${remain}s"
+      fi
 
-      if is_composing; then
-        # Preedit active → do not switch (stamp already refreshed by dbus).
-        debug "zh composing; switch deferred schema=$(rime_schema)"
-      else
-        debug "zh idle=${idle_for}s remain=${remain}s schema=$(rime_schema)"
-
-        if ((idle_for >= IDLE_SEC)); then
-          debug "threshold hit → SetAsciiMode(true)"
+      if ((idle_for >= IDLE_SEC)); then
+        # Re-read immediately before switching: debug/gdbus or a just-arrived
+        # key may have refreshed the stamp after idle_for was snapshotted.
+        idle_for=$(idle_seconds)
+        if ((idle_for < IDLE_SEC)); then
+          debug "switch skipped; stamp refreshed idle=${idle_for}s"
+        elif ((idle_for > IDLE_SEC * 5)); then
+          debug "switch skipped; implausible idle=${idle_for}s (bad stamp?)"
+          touch_stamp "implausible idle ignored"
+        else
+          debug "threshold hit idle=${idle_for}s schema=$(rime_schema) → SetAsciiMode(true)"
           if rime_switch_english; then
             log "auto-switched to English after ${idle_for}s idle"
             notify_user "已自动切换到英文输入"
@@ -426,7 +385,6 @@ main_loop() {
         debug "left Chinese (manual Shift or external)"
       fi
       was_chinese=0
-      set_composing 0
     fi
 
     sleep "$POLL_SEC"
@@ -439,13 +397,13 @@ main_loop() {
 
 acquire_lock
 WATCH_DIR="$(mktemp -d "$RUNTIME/fcitx-idle-english.XXXXXX")"
-trap cleanup EXIT INT TERM
+trap cleanup EXIT
+trap shutdown INT TERM
 
 log "started (idle=${IDLE_SEC}s poll=${POLL_SEC}s notify=${NOTIFY} debug=${DEBUG})"
-debug "pid=$$ stamp=$STAMP_FILE"
+debug "pid=$$ stamp=$STAMP_FILE watch_dir=$WATCH_DIR"
 
 wait_for_rime
 touch_stamp "startup"
-set_composing 0
 start_watchers
 main_loop
