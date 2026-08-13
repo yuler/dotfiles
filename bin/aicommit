@@ -75,6 +75,37 @@ cleanup_stale_opencode() {
   done < <(pgrep -f 'opencode.*run' 2>/dev/null || true)
 }
 
+# GNU timeout / gtimeout when present; otherwise a compact bash fallback
+# that maps SIGTERM/SIGKILL to GNU timeout's exit 124.
+run_with_timeout() {
+  local secs="$1" pid watcher status
+  shift
+
+  # Close lock fd 9 so children cannot hold the flock after we exit.
+  if command -v timeout >/dev/null 2>&1; then
+    timeout "$secs" "$@" 9>&-
+    return $?
+  fi
+  if command -v gtimeout >/dev/null 2>&1; then
+    gtimeout "$secs" "$@" 9>&-
+    return $?
+  fi
+
+  "$@" 9>&- &
+  pid=$!
+  (sleep "$secs" && kill -TERM "$pid" 2>/dev/null) 9>&- &
+  watcher=$!
+  wait "$pid"
+  status=$?
+  pkill -P "$watcher" 2>/dev/null || true
+  kill "$watcher" 2>/dev/null || true
+  wait "$watcher" 2>/dev/null || true
+  if [[ $status -eq 143 || $status -eq 137 ]]; then
+    return 124
+  fi
+  return "$status"
+}
+
 commit_prompt() {
   local skill_dir="$1"
   printf '%s\n' "Follow ${skill_dir}/SKILL.md. Run bash ${skill_dir}/scripts/git-diff.sh, then commit staged changes with an emoji message per the skill. Do not push."
@@ -88,23 +119,28 @@ agent_opencode() {
 
   cleanup_stale_opencode
 
-  local -a model_flag=()
+  local -a cmd=(opencode --pure --agent build run /git-commit)
   if [[ -n "$OPENCODE_MODEL" ]]; then
-    model_flag=(--model "$OPENCODE_MODEL")
+    cmd=(opencode --pure --model "$OPENCODE_MODEL" --agent build run /git-commit)
   fi
 
-  local -a runner=()
-  if [[ -t 0 && -t 1 ]]; then
-    runner=(opencode --pure "${model_flag[@]}" --agent build run /git-commit)
-  elif command -v script >/dev/null 2>&1; then
-    runner=(script -q -c "opencode --pure ${OPENCODE_MODEL:+--model \"$OPENCODE_MODEL\"} --agent build run /git-commit" /dev/null)
-  else
-    echo "opencode needs a terminal. Install 'script' or run from an interactive shell."
-    return 1
+  local -a runner=("${cmd[@]}")
+  if [[ ! -t 0 || ! -t 1 ]]; then
+    if ! command -v script >/dev/null 2>&1; then
+      echo "opencode needs a terminal. Install 'script' or run from an interactive shell."
+      return 1
+    fi
+    # util-linux: script -q -c 'cmd' /dev/null
+    # BSD/macOS:  script -q /dev/null cmd [args...]
+    if script -q -c true /dev/null >/dev/null 2>&1; then
+      runner=(script -q -c "$(printf '%q ' "${cmd[@]}")" /dev/null)
+    else
+      runner=(script -q /dev/null "${cmd[@]}")
+    fi
   fi
 
   local status=0
-  if ! timeout "$AICOMMIT_AGENT_TIMEOUT" "${runner[@]}"; then
+  if ! run_with_timeout "$AICOMMIT_AGENT_TIMEOUT" "${runner[@]}"; then
     status=$?
     if [[ $status -eq 124 ]]; then
       echo "opencode timed out after ${AICOMMIT_AGENT_TIMEOUT}s"
@@ -131,7 +167,7 @@ agent_cursor() {
   fi
 
   local status=0
-  if ! timeout "$AICOMMIT_AGENT_TIMEOUT" cursor-agent -p --force "$(commit_prompt "$skill_dir")"; then
+  if ! run_with_timeout "$AICOMMIT_AGENT_TIMEOUT" cursor-agent -p --force "$(commit_prompt "$skill_dir")"; then
     status=$?
     if [[ $status -eq 124 ]]; then
       echo "cursor-agent timed out after ${AICOMMIT_AGENT_TIMEOUT}s"
@@ -157,7 +193,7 @@ agent_pi() {
   fi
 
   local status=0
-  if ! timeout "$AICOMMIT_AGENT_TIMEOUT" pi -p "$(commit_prompt "$skill_dir")"; then
+  if ! run_with_timeout "$AICOMMIT_AGENT_TIMEOUT" pi -p "$(commit_prompt "$skill_dir")"; then
     status=$?
     if [[ $status -eq 124 ]]; then
       echo "pi timed out after ${AICOMMIT_AGENT_TIMEOUT}s"
