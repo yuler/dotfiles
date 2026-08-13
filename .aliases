@@ -124,3 +124,7 @@ alias headers=httpstat
 # Node.js CLI
 alias npkill='npx npkill -s size'
 alias kill-tabs='npx kill-tabs'
+
+# AI agent CI
+alias c='opencode'
+alias ca='cursor-agent'
