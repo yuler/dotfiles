@@ -2,13 +2,15 @@
 
 # AI-assisted git commit.
 #
-# Try agents in order: opencode → cursor-agent → pi. Stop on first success;
+# Try agents in order: pi → opencode → cursor-agent. Stop on first success;
 # if all fail, exit with error. Note: this is an executable script (not a
 # sourced shell function), so we cannot rely on shell aliases like `gaa`/`gpo`.
 
 OPENCODE_MODEL="${AICOMMIT_MODEL:-}"
 AICOMMIT_AGENT_TIMEOUT="${AICOMMIT_AGENT_TIMEOUT:-180}"
 LOCK_FILE="${AICOMMIT_LOCK_FILE:-${XDG_RUNTIME_DIR:-/tmp}/aicommit.lock}"
+AICOMMIT_TOTAL_INPUT=0
+AICOMMIT_TOTAL_OUTPUT=0
 
 usage() {
   echo "Usage: aicommit [-p|--push]"
@@ -50,6 +52,105 @@ require_git_repo() {
 
 has_staged_changes() {
   ! git diff --cached --quiet
+}
+
+now_ms() {
+  local v
+  v="$(date +%s%N 2>/dev/null)"
+  if [[ "$v" =~ ^[0-9]+$ ]]; then
+    printf '%s\n' "${v:0:13}"
+  else
+    printf '%s000\n' "$(date +%s)"
+  fi
+}
+
+fmt_duration() {
+  local ms="$1"
+  if (( ms >= 60000 )); then
+    printf '%dm %ds\n' $((ms / 60000)) $(((ms % 60000) / 1000))
+  elif (( ms >= 1000 )); then
+    printf '%.1fs\n' "$(awk "BEGIN{printf \"%.1f\", $ms/1000}")"
+  else
+    printf '%dms\n' "$ms"
+  fi
+}
+
+# 1000 → 1K, 1_000_000 → 1M; strip trailing .0
+fmt_tokens() {
+  local n="$1" scaled unit
+  if (( n >= 1000000 )); then
+    scaled="$(awk "BEGIN{printf \"%.1f\", $n/1000000}")"
+    unit=M
+  elif (( n >= 1000 )); then
+    scaled="$(awk "BEGIN{printf \"%.1f\", $n/1000}")"
+    unit=K
+  else
+    printf '%s\n' "$n"
+    return
+  fi
+  scaled="${scaled%.0}"
+  printf '%s%s\n' "$scaled" "$unit"
+}
+
+gum_out() {
+  local color="$1" text="$2"
+  if command -v gum >/dev/null 2>&1; then
+    gum style --foreground "$color" --bold "$text"
+  else
+    echo "$text"
+  fi
+}
+
+json_usage_sum() {
+  local file="$1" filter="$2" sum
+  command -v jq >/dev/null 2>&1 || return 1
+  sum="$(jq -s "$filter" "$file" 2>/dev/null)" || return 1
+  [[ "$sum" =~ ^[0-9]+$ && "$sum" != "0" ]] || return 1
+  printf '%s\n' "$sum"
+}
+
+add_usage() {
+  local in="$1" out="$2"
+  AICOMMIT_TOTAL_INPUT=$((AICOMMIT_TOTAL_INPUT + in))
+  AICOMMIT_TOTAL_OUTPUT=$((AICOMMIT_TOTAL_OUTPUT + out))
+}
+
+add_opencode_usage() {
+  local file="$1" tin tout
+  tin="$(json_usage_sum "$file" '[.[] | select(.type == "step_finish" and .part.tokens) | .part.tokens.input] | add // 0')" || tin=0
+  tout="$(json_usage_sum "$file" '[.[] | select(.type == "step_finish" and .part.tokens) | .part.tokens.output] | add // 0')" || tout=0
+  add_usage "$tin" "$tout"
+}
+
+add_cursor_usage() {
+  local file="$1" tin tout
+  tin="$(json_usage_sum "$file" '[.[] | select(.type == "result") | .usage.inputTokens] | add // 0')" || tin=0
+  tout="$(json_usage_sum "$file" '[.[] | select(.type == "result") | .usage.outputTokens] | add // 0')" || tout=0
+  add_usage "$tin" "$tout"
+}
+
+add_pi_usage() {
+  local file="$1" tin tout
+  tin="$(json_usage_sum "$file" '[.[] | select(.type == "message_end") | .message.usage.input] | add // 0')" || tin=0
+  tout="$(json_usage_sum "$file" '[.[] | select(.type == "message_end") | .message.usage.output] | add // 0')" || tout=0
+  add_usage "$tin" "$tout"
+}
+
+# Print summary once at exit (tokens + duration).
+print_summary() {
+  local now diff total
+  now="$(now_ms)"
+  diff=$((now - START_TIME))
+
+  if (( AICOMMIT_TOTAL_INPUT > 0 || AICOMMIT_TOTAL_OUTPUT > 0 )); then
+    total=$((AICOMMIT_TOTAL_INPUT + AICOMMIT_TOTAL_OUTPUT))
+    gum_out 39 "Tokens: $(fmt_tokens "$total") total ($(fmt_tokens "$AICOMMIT_TOTAL_INPUT") in / $(fmt_tokens "$AICOMMIT_TOTAL_OUTPUT") out)"
+  fi
+  gum_out 212 "Total time: $(fmt_duration "$diff")"
+}
+
+on_exit() {
+  print_summary
 }
 
 find_git_commit_skill_dir() {
@@ -119,29 +220,19 @@ agent_opencode() {
 
   cleanup_stale_opencode
 
-  local -a cmd=(opencode --pure --agent build run /git-commit)
+  local -a cmd=(opencode --pure --agent build --format json)
   if [[ -n "$OPENCODE_MODEL" ]]; then
-    cmd=(opencode --pure --model "$OPENCODE_MODEL" --agent build run /git-commit)
+    cmd=(opencode --pure --model "$OPENCODE_MODEL" --agent build --format json)
   fi
+  cmd+=(run /git-commit)
 
-  local -a runner=("${cmd[@]}")
-  if [[ ! -t 0 || ! -t 1 ]]; then
-    if ! command -v script >/dev/null 2>&1; then
-      echo "opencode needs a terminal. Install 'script' or run from an interactive shell."
-      return 1
-    fi
-    # util-linux: script -q -c 'cmd' /dev/null
-    # BSD/macOS:  script -q /dev/null cmd [args...]
-    if script -q -c true /dev/null >/dev/null 2>&1; then
-      runner=(script -q -c "$(printf '%q ' "${cmd[@]}")" /dev/null)
-    else
-      runner=(script -q /dev/null "${cmd[@]}")
-    fi
-  fi
+  local tmp status quoted
+  tmp="$(mktemp "${TMPDIR:-/tmp}/aicommit-opencode.XXXXXX")" || return 1
+  quoted="$(printf '%q ' "${cmd[@]}")"
 
-  local status=0
-  if ! run_with_timeout "$AICOMMIT_AGENT_TIMEOUT" "${runner[@]}"; then
+  if ! run_with_timeout "$AICOMMIT_AGENT_TIMEOUT" bash -c "set -o pipefail; $quoted | tee '$tmp' | jq -j 'select(.type == \"text\" or (.type == \"tool_use\" and .part.tool == \"bash\")) | if .type == \"text\" then .part.text + \"\\n\" else \"\$ \" + .part.state.input.command + \"\\n\" end' 2>/dev/null; s=\$?; printf '\\n'; exit \"\$s\""; then
     status=$?
+    rm -f "$tmp"
     if [[ $status -eq 124 ]]; then
       echo "opencode timed out after ${AICOMMIT_AGENT_TIMEOUT}s"
     else
@@ -151,6 +242,8 @@ agent_opencode() {
     return "$status"
   fi
 
+  add_opencode_usage "$tmp"
+  rm -f "$tmp"
   return 0
 }
 
@@ -166,17 +259,38 @@ agent_cursor() {
     return 127
   fi
 
-  local status=0
-  if ! run_with_timeout "$AICOMMIT_AGENT_TIMEOUT" cursor-agent -p --force "$(commit_prompt "$skill_dir")"; then
-    status=$?
-    if [[ $status -eq 124 ]]; then
-      echo "cursor-agent timed out after ${AICOMMIT_AGENT_TIMEOUT}s"
-    else
-      echo "cursor-agent failed (exit $status)"
+  local prompt tmp status
+  prompt="$(commit_prompt "$skill_dir")"
+  tmp="$(mktemp "${TMPDIR:-/tmp}/aicommit-cursor.XXXXXX")" || return 1
+
+  if command -v jq >/dev/null 2>&1; then
+    if ! run_with_timeout "$AICOMMIT_AGENT_TIMEOUT" bash -c "set -o pipefail; cursor-agent -p --force --output-format json '$prompt' | tee '$tmp' | jq -j 'select(.type == \"assistant\" or .type == \"result\") | if .type == \"assistant\" then (.message.content | map(.text // empty) | join(\"\")) else .result end, \"\\n\"' 2>/dev/null; s=\$?; printf '\\n'; exit \"\$s\""; then
+      status=$?
+      rm -f "$tmp"
+      if [[ $status -eq 124 ]]; then
+        echo "cursor-agent timed out after ${AICOMMIT_AGENT_TIMEOUT}s"
+      else
+        echo "cursor-agent failed (exit $status)"
+      fi
+      return "$status"
     fi
-    return "$status"
+  else
+    if ! run_with_timeout "$AICOMMIT_AGENT_TIMEOUT" cursor-agent -p --force "$prompt"; then
+      status=$?
+      rm -f "$tmp"
+      if [[ $status -eq 124 ]]; then
+        echo "cursor-agent timed out after ${AICOMMIT_AGENT_TIMEOUT}s"
+      else
+        echo "cursor-agent failed (exit $status)"
+      fi
+      return "$status"
+    fi
+    rm -f "$tmp"
+    return 0
   fi
 
+  add_cursor_usage "$tmp"
+  rm -f "$tmp"
   return 0
 }
 
@@ -192,15 +306,33 @@ agent_pi() {
     return 127
   fi
 
-  local status=0
-  if ! run_with_timeout "$AICOMMIT_AGENT_TIMEOUT" pi -p "$(commit_prompt "$skill_dir")"; then
-    status=$?
-    if [[ $status -eq 124 ]]; then
-      echo "pi timed out after ${AICOMMIT_AGENT_TIMEOUT}s"
-    else
-      echo "pi failed (exit $status)"
+  local prompt status=0 tmp
+  prompt="$(commit_prompt "$skill_dir")"
+
+  if command -v jq >/dev/null 2>&1; then
+    tmp="$(mktemp "${TMPDIR:-/tmp}/aicommit-pi.XXXXXX")" || return 1
+    if ! run_with_timeout "$AICOMMIT_AGENT_TIMEOUT" bash -c "set -o pipefail; pi -p --mode json '$prompt' | tee '$tmp' | jq -j 'select(.type == \"message_update\" and .assistantMessageEvent.type == \"text_delta\") | .assistantMessageEvent.delta' 2>/dev/null; s=\$?; printf '\\n'; exit \"\$s\""; then
+      status=$?
+      rm -f "$tmp"
+      if [[ $status -eq 124 ]]; then
+        echo "pi timed out after ${AICOMMIT_AGENT_TIMEOUT}s"
+      else
+        echo "pi failed (exit $status)"
+      fi
+      return "$status"
     fi
-    return "$status"
+    add_pi_usage "$tmp"
+    rm -f "$tmp"
+  else
+    if ! run_with_timeout "$AICOMMIT_AGENT_TIMEOUT" pi -p "$prompt"; then
+      status=$?
+      if [[ $status -eq 124 ]]; then
+        echo "pi timed out after ${AICOMMIT_AGENT_TIMEOUT}s"
+      else
+        echo "pi failed (exit $status)"
+      fi
+      return "$status"
+    fi
   fi
 
   return 0
@@ -224,13 +356,13 @@ try_agent() {
 }
 
 run_commit_agents() {
+  try_agent "pi" agent_pi && return 0
+  echo "Falling back to opencode..."
   try_agent "opencode" agent_opencode && return 0
   echo "Falling back to cursor-agent..."
   try_agent "cursor-agent" agent_cursor && return 0
-  echo "Falling back to pi..."
-  try_agent "pi" agent_pi && return 0
 
-  echo "All agents failed (opencode, cursor-agent, pi)"
+  echo "All agents failed (pi, opencode, cursor-agent)"
   return 1
 }
 
@@ -243,6 +375,8 @@ acquire_lock() {
 }
 
 parse_args "$@"
+START_TIME="$(now_ms)"
+trap on_exit EXIT
 require_git_repo
 acquire_lock
 
