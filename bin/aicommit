@@ -11,6 +11,7 @@ AICOMMIT_AGENT_TIMEOUT="${AICOMMIT_AGENT_TIMEOUT:-180}"
 LOCK_FILE="${AICOMMIT_LOCK_FILE:-${XDG_RUNTIME_DIR:-/tmp}/aicommit.lock}"
 AICOMMIT_TOTAL_INPUT=0
 AICOMMIT_TOTAL_OUTPUT=0
+INTERRUPTED=0
 
 usage() {
   echo "Usage: aicommit [-p|--push]"
@@ -153,6 +154,46 @@ on_exit() {
   print_summary
 }
 
+# Recurse by parent pid so children GNU timeout moved into another
+# process group are still found.
+list_descendants() {
+  local parent="$1" child
+  while read -r child; do
+    [[ -z "$child" ]] && continue
+    list_descendants "$child"
+    printf '%s\n' "$child"
+  done < <(pgrep -P "$parent" 2>/dev/null || true)
+}
+
+stop_children() {
+  local -a pids=()
+  local pid
+  while read -r pid; do
+    [[ -z "$pid" ]] && continue
+    pids+=("$pid")
+  done < <(list_descendants $$)
+
+  if ((${#pids[@]} > 0)); then
+    kill -TERM "${pids[@]}" 2>/dev/null || true
+    sleep 0.05
+    kill -KILL "${pids[@]}" 2>/dev/null || true
+  fi
+  cleanup_stale_opencode
+}
+
+on_interrupt() {
+  INTERRUPTED=1
+  trap '' INT TERM
+  echo "Interrupted, stopping..." >&2
+  stop_children
+  exit 130
+}
+
+was_interrupted() {
+  local status="${1:-0}"
+  (( INTERRUPTED == 1 || status == 130 || status == 143 ))
+}
+
 find_git_commit_skill_dir() {
   local candidate
   for candidate in \
@@ -178,18 +219,30 @@ cleanup_stale_opencode() {
 
 # GNU timeout / gtimeout when present; otherwise a compact bash fallback
 # that maps SIGTERM/SIGKILL to GNU timeout's exit 124.
+#
+# Always run in the background and wait(1) so a SIGINT trap can fire
+# immediately. A foreground timeout defers the trap until the agent exits,
+# which is why Ctrl+C could not stop aicommit.
 run_with_timeout() {
   local secs="$1" pid watcher status
   shift
 
   # Close lock fd 9 so children cannot hold the flock after we exit.
   if command -v timeout >/dev/null 2>&1; then
-    timeout "$secs" "$@" 9>&-
-    return $?
+    timeout --kill-after=2 "$secs" "$@" 9>&- &
+    pid=$!
+    wait "$pid"
+    status=$?
+    was_interrupted "$status" && return 130
+    return "$status"
   fi
   if command -v gtimeout >/dev/null 2>&1; then
-    gtimeout "$secs" "$@" 9>&-
-    return $?
+    gtimeout --kill-after=2 "$secs" "$@" 9>&- &
+    pid=$!
+    wait "$pid"
+    status=$?
+    was_interrupted "$status" && return 130
+    return "$status"
   fi
 
   "$@" 9>&- &
@@ -201,6 +254,7 @@ run_with_timeout() {
   pkill -P "$watcher" 2>/dev/null || true
   kill "$watcher" 2>/dev/null || true
   wait "$watcher" 2>/dev/null || true
+  was_interrupted "$status" && return 130
   if [[ $status -eq 143 || $status -eq 137 ]]; then
     return 124
   fi
@@ -345,9 +399,14 @@ commit_succeeded() {
 try_agent() {
   local name="$1"
   local fn="$2"
+  local status
 
   echo "Trying ${name}..."
-  "$fn" || true
+  "$fn"
+  status=$?
+  if was_interrupted "$status"; then
+    return 130
+  fi
   if commit_succeeded; then
     return 0
   fi
@@ -356,11 +415,21 @@ try_agent() {
 }
 
 run_commit_agents() {
+  local status
+
   try_agent "pi" agent_pi && return 0
+  status=$?
+  was_interrupted "$status" && return 130
+
   echo "Falling back to opencode..."
   try_agent "opencode" agent_opencode && return 0
+  status=$?
+  was_interrupted "$status" && return 130
+
   echo "Falling back to cursor-agent..."
   try_agent "cursor-agent" agent_cursor && return 0
+  status=$?
+  was_interrupted "$status" && return 130
 
   echo "All agents failed (pi, opencode, cursor-agent)"
   return 1
@@ -377,6 +446,7 @@ acquire_lock() {
 parse_args "$@"
 START_TIME="$(now_ms)"
 trap on_exit EXIT
+trap on_interrupt INT TERM
 require_git_repo
 acquire_lock
 
