@@ -15,7 +15,7 @@
 # English (Rime has no IsComposing on D-Bus).
 #
 # Env:
-#   FCITX_IDLE_ENGLISH_SEC     idle seconds (default: 60)
+#   FCITX_IDLE_ENGLISH_SEC     idle seconds (default: 30)
 #   FCITX_IDLE_ENGLISH_POLL    poll seconds (default: 1)
 #   FCITX_IDLE_ENGLISH_NOTIFY  notify-send on switch (default: 1)
 #   FCITX_IDLE_ENGLISH_DEBUG   verbose logs (default: 1)
@@ -28,7 +28,7 @@ set -euo pipefail
 # Config
 # ---------------------------------------------------------------------------
 
-IDLE_SEC="${FCITX_IDLE_ENGLISH_SEC:-60}"
+IDLE_SEC="${FCITX_IDLE_ENGLISH_SEC:-30}"
 POLL_SEC="${FCITX_IDLE_ENGLISH_POLL:-1}"
 NOTIFY="${FCITX_IDLE_ENGLISH_NOTIFY:-1}"
 DEBUG="${FCITX_IDLE_ENGLISH_DEBUG:-1}"
@@ -124,9 +124,9 @@ shutdown() {
 touch_stamp() {
   local now tmp
   now=$(date +%s)
-  tmp="$STAMP_FILE.tmp.$$"
-  printf '%s\n' "$now" >"$tmp"
-  mv -f "$tmp" "$STAMP_FILE"
+  tmp=$(mktemp "$STAMP_FILE.tmp.XXXXXX") || return 1
+  printf '%s\n' "$now" >"$tmp" || { rm -f "$tmp"; return 1; }
+  mv -f "$tmp" "$STAMP_FILE" || { rm -f "$tmp"; return 1; }
   [[ -n ${1:-} ]] && debug "stamp ← $1"
 }
 
@@ -347,7 +347,7 @@ main_loop() {
 
     if rime_is_chinese; then
       if ((was_chinese == 0)); then
-        touch_stamp "entered Chinese"
+        touch_stamp "entered Chinese" || debug "stamp write failed (entered Chinese)"
         log "Chinese (Rime ascii=false); idle timer armed"
         was_chinese=1
       fi
@@ -374,7 +374,7 @@ main_loop() {
             log "auto-switched to English after ${idle_for}s idle"
             notify_user "已自动切换到英文输入"
             was_chinese=0
-            touch_stamp "after switch"
+            touch_stamp "after switch" || debug "stamp write failed (after switch)"
           else
             log "SetAsciiMode failed; will retry"
           fi
@@ -404,6 +404,6 @@ log "started (idle=${IDLE_SEC}s poll=${POLL_SEC}s notify=${NOTIFY} debug=${DEBUG
 debug "pid=$$ stamp=$STAMP_FILE watch_dir=$WATCH_DIR"
 
 wait_for_rime
-touch_stamp "startup"
+touch_stamp "startup" || debug "stamp write failed (startup)"
 start_watchers
 main_loop
