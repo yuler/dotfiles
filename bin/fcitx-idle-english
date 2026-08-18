@@ -8,7 +8,8 @@
 #    from a stamp file under $XDG_RUNTIME_DIR.
 # 2. Refresh the stamp on real EV_KEY (press / release / autorepeat).
 #    Most apps use wayland_v2, so fcitx InputContext D-Bus is not used.
-# 3. If still Chinese and idle >= IDLE_SEC → SetAsciiMode(true).
+# 3. If still Chinese (Rime current, ascii=false) and idle >= IDLE_SEC
+#    → SetAsciiMode(true). Skip if already English (keyboard-us or Rime ascii).
 # 4. Singleton via flock; keyboard devices are rescanned periodically.
 #
 # Pausing mid-preedit with no key events still ages the timer and may switch
@@ -48,6 +49,8 @@ EV_KEY=1
 KEY_UNKNOWN=240
 
 FCITX_DEST=org.fcitx.Fcitx5
+FCITX_CTRL_PATH=/controller
+FCITX_CTRL_IFACE=org.fcitx.Fcitx.Controller1
 RIME_PATH=/rime
 RIME_IFACE=org.fcitx.Fcitx.Rime1
 
@@ -64,9 +67,29 @@ debug() {
   printf '[%s][debug] %s %s\n' "$LOG_TAG" "$(date '+%H:%M:%S')" "$*" >&2
 }
 
+# Omarchy archives every on-screen toast into notification history.
+# Drop our popup/history JSON so expire cannot move it there.
+drop_ime_notification_history() {
+  local base="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/notifications"
+  local i f
+  shopt -s nullglob
+  for i in $(seq 1 40); do
+    for f in "$base"/*.json "$base"/history/*.json; do
+      [[ -f $f ]] || continue
+      grep -q '"app":"Fcitx"' "$f" 2>/dev/null || continue
+      grep -q '"summary":"输入法"' "$f" 2>/dev/null || continue
+      rm -f "$f"
+    done
+    sleep 0.2
+  done
+}
+
 notify_user() {
   ((NOTIFY)) || return 0
-  notify-send -u low -a Fcitx "输入法" "$1" 2>/dev/null || true
+  # -e: freedesktop transient (popup only). Omarchy still files shown toasts
+  # into history, so drop_ime_notification_history removes the matching files.
+  notify-send -e -u low -a Fcitx "输入法" "$1" 2>/dev/null || true
+  drop_ime_notification_history >/dev/null 2>&1 &
 }
 
 # ---------------------------------------------------------------------------
@@ -301,9 +324,29 @@ rime_dbus() {
     --method "$RIME_IFACE.$method" "$@" 2>/dev/null
 }
 
-# Returns 0 if Rime is in Chinese (ascii_mode=false).
-rime_is_chinese() {
+fcitx_dbus() {
+  local method="$1"
+  shift
+  gdbus call --session \
+    --dest "$FCITX_DEST" \
+    --object-path "$FCITX_CTRL_PATH" \
+    --method "$FCITX_CTRL_IFACE.$method" "$@" 2>/dev/null
+}
+
+# Current fcitx IM unique name, e.g. rime / keyboard-us.
+fcitx_current_im() {
   local out
+  out=$(fcitx_dbus CurrentInputMethod) || return 1
+  [[ $out =~ \'([^\']+)\' ]] || return 1
+  printf '%s\n' "${BASH_REMATCH[1]}"
+}
+
+# Returns 0 if Rime is the active IM and in Chinese (ascii_mode=false).
+# keyboard-us (or any non-Rime IM) and Rime English are already English — skip.
+rime_is_chinese() {
+  local im out
+  im=$(fcitx_current_im) || return 1
+  [[ $im == rime ]] || return 1
   out=$(rime_dbus IsAsciiMode) || return 1
   # gdbus prints "(false,)" or "(true,)"
   [[ $out == *false* ]]
@@ -368,6 +411,9 @@ main_loop() {
         elif ((idle_for > IDLE_SEC * 5)); then
           debug "switch skipped; implausible idle=${idle_for}s (bad stamp?)"
           touch_stamp "implausible idle ignored"
+        elif ! rime_is_chinese; then
+          debug "switch skipped; already English im=$(fcitx_current_im || echo '?')"
+          was_chinese=0
         else
           debug "threshold hit idle=${idle_for}s schema=$(rime_schema) → SetAsciiMode(true)"
           if rime_switch_english; then
