@@ -52,7 +52,7 @@ create_sessions() {
       for folder in "${folders[@]}"; do
         local win_id
         win_id=$(tmux new-window -t "$session_name:" -n "$folder" -c "$base_dir/$folder" -P -F '#{window_id}')
-        tmux send-keys -t "$win_id" 'tdl opencode cursor-agent' C-m
+        tmux send-keys -t "$win_id" 'tdl opencode' C-m
       done
 
       tmux select-window -t "$session_name:$window_name"
