@@ -128,3 +128,4 @@ alias kill-tabs='npx kill-tabs'
 # AI agent CI
 alias c='opencode'
 alias ca='cursor-agent'
+alias agy="agy --dangerously-skip-permissions"
