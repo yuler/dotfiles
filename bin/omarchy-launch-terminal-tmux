@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+
+# omarchy:summary=Launch terminal: create tmux-dev sessions on first use, else attach
+#
+# OVERRIDE of Omarchy's ~/omarchy/bin/omarchy-launch-terminal-tmux.
+#
+# Omarchy's original runs `tmux attach || tmux new -s Work` in the current
+# directory, which creates a stray "Work" session. This script replaces that
+# behavior.
+#
+# IMPORTANT: the body is written to a temp file and launched with `bash <file>`
+# instead of `bash -c '...'`. The launcher (uwsm/xdg-terminal-exec) scans
+# inline args for `VAR=value` tokens and rejects array expansions like
+# ${CONFIGS[@]}/${folders[@]}; a file argument avoids that parsing.
+#
+# NOTE: ~/Projects/dotfiles/bin is NOT on Hyprland's runtime PATH (only the
+# interactive shell's PATH), so PATH shadowing won't work here. This override is
+# wired up from ~/.config/hypr/bindings.lua, which binds SUPER+ALT+RETURN
+# directly to this file's absolute path:
+#
+#   hl.unbind("SUPER + ALT + RETURN")
+#   o.bind("SUPER + ALT + RETURN", "Tmux", "$HOME/Projects/dotfiles/bin/omarchy-launch-terminal-tmux")
+#
+# Launches a fresh terminal, then: if the tmux-dev sessions (projects/id5) don't
+# exist, creates them; otherwise just attach. Defaults to attaching projects.
+
+_tmp=$(mktemp) || exit 1
+trap 'rm -f "$_tmp"' EXIT
+
+cat >"$_tmp" <<'EOF'
+# Create the tmux-dev sessions if projects/id5 are missing.
+create_sessions() {
+  local CONFIGS=(
+    "projects|$HOME/Projects|projects|yuler.dev|airvoice|typo|beep"
+    "id5|$HOME/Company|company|timeway|mall-mono|zhsq-mono"
+  )
+
+  local setup_session
+  setup_session() {
+    local session_name="$1"
+    local base_dir="$2"
+    local window_name="$3"
+    shift 3
+    local folders=("$@")
+
+    if ! tmux has-session -t "=$session_name" 2>/dev/null; then
+      tmux new-session -d -s "$session_name" -n "$window_name" -c "$base_dir"
+      tmux split-window -h -t "$session_name:$window_name" -c "$base_dir"
+      tmux split-window -v -t "$session_name:$window_name" -c "$base_dir"
+      tmux select-pane -t "$session_name:$window_name.1"
+
+      for folder in "${folders[@]}"; do
+        local win_id
+        win_id=$(tmux new-window -t "$session_name:" -n "$folder" -c "$base_dir/$folder" -P -F '#{window_id}')
+        tmux send-keys -t "$win_id" 'tdl opencode cursor-agent' C-m
+      done
+
+      tmux select-window -t "$session_name:$window_name"
+      gum style --foreground 82 "created $session_name"
+    else
+      gum style --foreground 226 "session $session_name already exists"
+    fi
+  }
+
+  local cfg session_name base_dir window_name rest folders
+  local -a folders
+  for cfg in "${CONFIGS[@]}"; do
+    IFS='|' read -r session_name base_dir window_name rest <<<"$cfg"
+    IFS='|' read -r -a folders <<<"$rest"
+    setup_session "$session_name" "$base_dir" "$window_name" "${folders[@]}"
+  done
+}
+
+if ! tmux has-session -t =projects 2>/dev/null && ! tmux has-session -t =id5 2>/dev/null; then
+  tmux start-server 2>/dev/null
+  create_sessions
+fi
+
+# Attach: default to projects if present, otherwise let the user pick.
+if tmux has-session -t =projects 2>/dev/null; then
+  exec tmux attach-session -t =projects
+fi
+sessions=$(tmux list-sessions -F '#{session_name}' 2>/dev/null || true)
+selected=$(gum choose --header "Attach to which session?" $sessions)
+exec tmux attach-session -t "=$selected"
+EOF
+
+omarchy-launch-terminal bash "$_tmp"
