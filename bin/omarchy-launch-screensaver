@@ -1,0 +1,394 @@
+#!/bin/bash
+
+# omarchy:summary=Launch the Omarchy screensaver showing a random programmer quote (single-file, portable).
+
+
+# 20 programmer quotes: figlet "slant" banner + Chinese + English, separated by "====".
+# Regenerate the banners with: figlet -f slant "KEYWORD"
+QUOTES=$(cat <<'__OMARCHY_QUOTES__'
+    __ __ ________________     __________  ____  _____   ________
+   / //_// ____/ ____/ __ \   / ____/ __ \/ __ \/  _/ | / / ____/
+  / ,<  / __/ / __/ / /_/ /  / /   / / / / / / // //  |/ / / __  
+ / /| |/ /___/ /___/ ____/  / /___/ /_/ / /_/ // // /|  / /_/ /  
+/_/ |_/_____/_____/_/       \____/\____/_____/___/_/ |_/\____/   
+                                                                 
+
+KEEP CODING
+
+No overnight success — every commit gets you closer.
+代码不会一夜成功，但每一次提交都在靠近它。
+====
+   ________________  __   __  ____  ___   ______________  __
+  / ___/_  __/   \ \/ /  / / / / / / / | / / ____/ __ \ \/ /
+  \__ \ / / / /| |\  /  / /_/ / / / /  |/ / / __/ /_/ /\  / 
+ ___/ // / / ___ |/ /  / __  / /_/ / /|  / /_/ / _, _/ / /  
+/____//_/ /_/  |_/_/  /_/ /_/\____/_/ |_/\____/_/ |_| /_/   
+                                                            
+
+STAY HUNGRY
+
+Stay hungry, stay foolish. — Steve Jobs
+求知若饥，虚心若愚。
+====
+   _____ __  __________     __________
+  / ___// / / /  _/ __ \   /  _/_  __/
+  \__ \/ /_/ // // /_/ /   / /  / /   
+ ___/ / __  // // ____/  _/ /  / /    
+/____/_/ /_/___/_/      /___/ /_/     
+                                      
+
+SHIP IT
+
+Done is better than perfect.
+完成比完美更重要。
+====
+   _____ __  ______ _       __   __________  ____  ______
+  / ___// / / / __ \ |     / /  / ____/ __ \/ __ \/ ____/
+  \__ \/ /_/ / / / / | /| / /  / /   / / / / / / / __/   
+ ___/ / __  / /_/ /| |/ |/ /  / /___/ /_/ / /_/ / /___   
+/____/_/ /_/\____/ |__/|__/   \____/\____/_____/_____/   
+                                                         
+
+SHOW CODE
+
+Talk is cheap. Show me the code. — Linus Torvalds
+空谈无用，代码为王。
+====
+  ________  _______   ____ __
+ /_  __/ / / /  _/ | / / //_/
+  / / / /_/ // //  |/ / ,<   
+ / / / __  // // /|  / /| |  
+/_/ /_/ /_/___/_/ |_/_/ |_|  
+                             
+
+THINK
+
+First solve the problem, then write the code.
+先解决问题，再写代码。
+====
+   _____ ______  _______  __    ____________  __
+  / ___//  _/  |/  / __ \/ /   /  _/ ____/\ \/ /
+  \__ \ / // /|_/ / /_/ / /    / // /_     \  / 
+ ___/ // // /  / / ____/ /____/ // __/     / /  
+/____/___/_/  /_/_/   /_____/___/_/       /_/   
+                                                
+
+SIMPLICITY
+
+Simplicity is the ultimate sophistication. — da Vinci
+简单是可靠的最高级形式。
+====
+ _       ______  ________________   ____________________________
+| |     / / __ \/  _/_  __/ ____/  /_  __/ ____/ ___/_  __/ ___/
+| | /| / / /_/ // /  / / / __/      / / / __/  \__ \ / /  \__ \ 
+| |/ |/ / _, _// /  / / / /___     / / / /___ ___/ // /  ___/ / 
+|__/|__/_/ |_/___/ /_/ /_____/    /_/ /_____//____//_/  /____/  
+                                                                
+
+WRITE TESTS
+
+Untested code is legacy, not art.
+没有测试的代码只是遗产，不是作品。
+====
+    ____  __________  __  ________
+   / __ \/ ____/ __ )/ / / / ____/
+  / / / / __/ / __  / / / / / __  
+ / /_/ / /___/ /_/ / /_/ / /_/ /  
+/_____/_____/_____/\____/\____/   
+                                  
+
+DEBUG
+
+Errors aren't failures; the machine is teaching you.
+报错不是失败，是计算机在教你。
+====
+    ____  ____  _   ___ ______   ____  ___    _   ____________
+   / __ \/ __ \/ | / ( )_  __/  / __ \/   |  / | / /  _/ ____/
+  / / / / / / /  |/ /|/ / /    / /_/ / /| | /  |/ // // /     
+ / /_/ / /_/ / /|  /   / /    / ____/ ___ |/ /|  // // /___   
+/_____/\____/_/ |_/   /_/    /_/   /_/  |_/_/ |_/___/\____/   
+                                                              
+
+DONT PANIC
+
+Keep calm, read the stack trace again.
+冷静，喝杯咖啡，再看一遍报错。
+====
+    ____  ______________  ___
+   / __ \/_  __/ ____/  |/  /
+  / /_/ / / / / /_  / /|_/ / 
+ / _, _/ / / / __/ / /  / /  
+/_/ |_| /_/ /_/   /_/  /_/   
+                             
+
+RTFM
+
+Read the manual first.
+先读文档，再问问题。
+====
+   __________  __  _____  _____________
+  / ____/ __ \/  |/  /  |/  /  _/_  __/
+  / /   / / / / /|_/ / /|_/ // /  / /   
+/ /___/ /_/ / /  / / /  / // /  / /    
+\____/\____/_/  /_/_/  /_/___/ /_/     
+                                       
+
+COMMIT
+
+Git history is a letter to your future self.
+提交历史是你写给未来自己的信。
+====
+    __    _________    ____  _   __
+   / /   / ____/   |  / __ \/ | / /
+  / /   / __/ / /| | / /_/ /  |/ / 
+ / /___/ /___/ ___ |/ _, _/ /|  /  
+/_____/_____/_/  |_/_/ |_/_/ |_/   
+                                   
+
+LEARN
+
+Improve a little every day, master in a decade.
+每天进步一点点，十年后你就是大神。
+====
+    __ __ ______________
+   / //_//  _/ ___/ ___/
+  / ,<   / / \__ \\__ \ 
+ / /| |_/ / ___/ /__/ / 
+/_/ |_/___//____/____/  
+                        
+
+KISS
+
+Keep it simple, stupid.
+保持简单，保持直接。
+====
+    ____  _______________   ________________  ____ 
+   / __ \/ ____/ ____/   | / ____/_  __/ __ \/ __ \
+  / /_/ / __/ / /_  / /| |/ /     / / / / / / /_/ /
+ / _, _/ /___/ __/ / ___ / /___  / / / /_/ / _, _/ 
+/_/ |_/_____/_/   /_/  |_\____/ /_/  \____/_/ |_|  
+                                                   
+
+REFACTOR
+
+Make it work, then make it beautiful.
+先把事情做对，再让它变好。
+====
+    __________  ________  _______
+   / ____/ __ \/ ____/ / / / ___/
+  / /_  / / / / /   / / / /\__ \ 
+ / __/ / /_/ / /___/ /_/ /___/ / 
+/_/    \____/\____/\____//____/  
+                                 
+
+FOCUS
+
+Deep beats wide.
+一次只做一件事，把一件事做深。
+====
+   ____  ____  ____________  ____________   ______
+  / __ \/ __ \/_  __/  _/  |/  /  _/__  /  / ____/
+  / / / / /_/ / / /  / // /|_/ // /   / /  / __/   
+/ /_/ / ____/ / / _/ // /  / // /   / /__/ /___   
+\____/_/     /_/ /___/_/  /_/___/  /____/_____/   
+                                                  
+
+OPTIMIZE
+
+Premature optimization is the root of all evil.
+过早优化是万恶之源。
+====
+    ____  ___  _________________   ______________
+   / __ \/   |/_  __/  _/ ____/ | / / ____/ ____/
+  / /_/ / /| | / /  / // __/ /  |/ / /   / __/   
+ / ____/ ___ |/ / _/ // /___/ /|  / /___/ /___   
+/_/   /_/  |_/_/ /___/_____/_/ |_/\____/_____/   
+                                                 
+
+PRACTICE
+
+Every master was once a beginner.
+所有大神都曾是菜鸟。
+====
+    ____  _________    ____  ___    ____  __    ______
+   / __ \/ ____/   |  / __ \/   |  / __ )/ /   / ____/
+  / /_/ / __/ / /| | / / / / /| | / __  / /   / __/   
+ / _, _/ /___/ ___ |/ /_/ / ___ |/ /_/ / /___/ /___   
+/_/ |_/_____/_/  |_/_____/_/  |_/_____/_____/_____/   
+                                                      
+
+READABLE
+
+Programs must be written for people to read. — SICP
+程序是写给人读的。
+====
+    ____  ____  __________________  __
+   / __ \/ __ \/ ____/_  __/ __ \ \/ /
+  / /_/ / / / / __/   / / / /_/ /\  / 
+ / ____/ /_/ / /___  / / / _, _/ / /  
+/_/    \____/_____/ /_/ /_/ |_| /_/   
+                                      
+
+POETRY
+
+Code is logic, and poetry.
+代码是逻辑，也是诗。
+====
+    __  _____ _    ________   ________  ___   __
+   / / / /   | |  / / ____/  / ____/ / / / | / /
+  / /_/ / /| | | / / __/    / /_  / / / /  |/ / 
+ / __  / ___ | |/ / /___   / __/ / /_/ / /|  /  
+/_/ /_/_/  |_|___/_____/  /_/    \____/_/ |_/   
+                                                
+
+HAVE FUN
+
+Have fun and ship something.
+编程是手艺，也是艺术。
+====
+__OMARCHY_QUOTES__
+)
+
+pick_quote() {
+  local n i
+  n=$(printf '%s\n' "$QUOTES" | awk 'BEGIN{RS="====\n"} $0!="" {c++} END{print c}')
+  i=$(( (RANDOM % n) + 1 ))
+  printf '%s\n' "$QUOTES" | awk -v RS='====\n' -v sel="$i" '$0!="" { c++; if (c==sel) { printf "%s", $0; exit } }'
+}
+
+write_foot_config() {
+  # Stock screensaver font is JetBrainsMono Nerd Font only, which has no CJK
+  # glyphs (Chinese renders as tofu). Add a CJK fallback and enlarge for fullscreen.
+  mkdir -p "$HOME/.config/foot"
+  cat > "$HOME/.config/foot/screensaver.ini" <<'EOF'
+[main]
+font=JetBrainsMono Nerd Font:size=28, Noto Sans CJK SC:size=20
+pad=0x0
+
+[colors-dark]
+background=000000
+foreground=ffffff
+EOF
+}
+
+write_screensaver_text() {
+  # The renderer mode reads this exact path every effect cycle.
+  mkdir -p "$HOME/.config/omarchy/branding"
+  pick_quote > "$HOME/.config/omarchy/branding/screensaver.txt"
+}
+
+# ============================================================================
+# Renderer mode (runs inside the fullscreen foot terminal).
+# A curated effect list instead of --random-effect: the stock runner's random
+# set includes glitch/echo effects (vhstape, decrypt, unstable, randomsequence)
+# that visibly duplicate text lines, which reads as "two lines of English".
+# `clear` between cycles also stops the previous effect's settled frame from
+# lingering under the next one.
+# ============================================================================
+EFFECTS=(beams fireworks print slide expand middleout spotlights pour scattered rain matrix bouncyballs bubbles orbittingvolley swarm synthgrid laseretch smoke colorshift sweep slice)
+
+renderer() {
+  screensaver_in_focus() {
+    hyprctl activewindow -j | jq -e '.class == "org.omarchy.screensaver"' >/dev/null 2>&1
+  }
+
+  exit_screensaver() {
+    hyprctl eval 'hl.config({ cursor = { invisible = false } })' &>/dev/null || hyprctl keyword cursor:invisible false &>/dev/null || true
+    pkill -x ttfx 2>/dev/null
+    pkill -f '[o]rg.omarchy.screensaver' 2>/dev/null
+    exit 0
+  }
+
+  trap exit_screensaver SIGINT SIGTERM SIGHUP SIGQUIT
+
+  printf '\033]11;rgb:00/00/00\007' # Set background color to black
+
+  hyprctl eval 'hl.config({ cursor = { invisible = true } })' &>/dev/null || hyprctl keyword cursor:invisible true &>/dev/null
+
+  local tty
+  tty=$(tty 2>/dev/null)
+
+  # Terminals allocate the pty at the default 80x24 and only resize it once the
+  # compositor has told the window how big it is. ttfx measures the terminal
+  # once, at startup, so starting it before the resize lands sizes an 80x24
+  # canvas and paints it into the corner of a fullscreen window.
+  wait_for_terminal_resize() {
+    local deadline=$((SECONDS + 2))
+    while ((SECONDS < deadline)) && [[ $(stty size 2>/dev/null) == "24 80" ]]; do
+      sleep 0.02
+    done
+  }
+
+  wait_for_terminal_resize
+
+  while true; do
+    clear
+    ttfx -i ~/.config/omarchy/branding/screensaver.txt \
+      --frame-rate 60 --canvas-width 0 --canvas-height 0 --reuse-canvas --anchor-canvas c --anchor-text c \
+      --no-restore-cursor "${EFFECTS[$((RANDOM % ${#EFFECTS[@]}))]}" &
+
+    while pgrep -t "${tty#/dev/}" -x ttfx >/dev/null; do
+      if read -n1 -t 1 || ! screensaver_in_focus; then
+        exit_screensaver
+      fi
+    done
+  done
+}
+
+if [[ ${1:-} == "--render" ]]; then
+  renderer
+  exit 0
+fi
+
+# Exit early if screensaver is already running
+pgrep -f '[o]rg.omarchy.screensaver' && exit 0
+
+# Allow screensaver to be turned off but also force started
+if omarchy-toggle-enabled screensaver-off && [[ ${1:-} != "force" ]]; then
+  exit 1
+fi
+
+SCRIPT_PATH="$(realpath "$0")"
+
+write_foot_config
+write_screensaver_text
+
+focused=$(omarchy-hyprland-monitor-focused)
+
+hypr_focus_monitor() {
+  hyprctl dispatch "hl.dsp.focus({ monitor = \"$1\" })" >/dev/null 2>&1 || hyprctl dispatch focusmonitor "$1" >/dev/null
+}
+
+hypr_exec() {
+  local command
+  printf -v command '%q ' "$@"
+
+  hyprctl dispatch "hl.dsp.exec_cmd([[$command]])" >/dev/null 2>&1 || hyprctl dispatch exec -- bash -lc "$command" >/dev/null
+}
+
+SOCKET="$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock"
+
+# Open Hyprland's event stream before spawning anything, so a terminal that maps
+# quickly can't emit its openwindow event before we are listening for it.
+exec {events}< <(socat -U - "UNIX-CONNECT:$SOCKET")
+
+# hypr_exec is async and a new window maps on whatever monitor is focused at that
+# moment. Block until this monitor's screensaver actually opens before moving
+# focus on -- otherwise slow-starting terminals all pile onto the last monitor.
+# The deadline is a safety net in case the window never appears.
+wait_for_screensaver_window() {
+  local line deadline=$((SECONDS + 5))
+  while ((SECONDS < deadline)) && IFS= read -r -t $((deadline - SECONDS)) -u "$events" line; do
+    [[ $line == openwindow\>\>*,org.omarchy.screensaver,* ]] && return 0
+  done
+}
+
+for m in $(hyprctl monitors -j | jq -r '.[] | .name'); do
+  hypr_focus_monitor "$m"
+
+  hypr_exec foot --app-id=org.omarchy.screensaver --config="$HOME/.config/foot/screensaver.ini" -e "$SCRIPT_PATH" --render
+
+  wait_for_screensaver_window
+done
+
+hypr_focus_monitor "$focused"
