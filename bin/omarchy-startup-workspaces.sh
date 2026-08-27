@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Login layout: workspace 5 = console, 2 = browser, 1 = editor, 3 = chat,
-# scratchpad = tmux-dev.
+# scratchpad = tmux.
 # Triggered from ~/.config/hypr/autostart.lua.
 
 # Give the compositor a moment to settle.
@@ -39,9 +39,8 @@ sleep 2
 setsid uwsm-app -- "$HOME/Applications/WeChat" &
 sleep 2
 
-# ---- Scratchpad: tmux-dev ----
+# ---- Scratchpad: tmux ----
+# Opening the scratchpad auto-seeds tmux (qconsole), so no manual launch needed.
 hyprctl dispatch 'hl.dsp.workspace.toggle_special("scratchpad")'
-sleep 2
-setsid uwsm-app -- xdg-terminal-exec -e tmux-dev &
 sleep 2
 hyprctl dispatch 'hl.dsp.workspace.toggle_special("scratchpad")'
