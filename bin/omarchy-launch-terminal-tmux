@@ -8,11 +8,6 @@
 # directory, which creates a stray "Work" session. This script replaces that
 # behavior.
 #
-# IMPORTANT: the body is written to a temp file and launched with `bash <file>`
-# instead of `bash -c '...'`. The launcher (uwsm/xdg-terminal-exec) scans
-# inline args for `VAR=value` tokens and rejects array expansions like
-# ${CONFIGS[@]}/${folders[@]}; a file argument avoids that parsing.
-#
 # NOTE: ~/Projects/dotfiles/bin is NOT on Hyprland's runtime PATH (only the
 # interactive shell's PATH), so PATH shadowing won't work here. This override is
 # wired up from ~/.config/hypr/bindings.lua, which binds SUPER+ALT+RETURN
@@ -21,18 +16,34 @@
 #   hl.unbind("SUPER + ALT + RETURN")
 #   o.bind("SUPER + ALT + RETURN", "Tmux", "$HOME/Projects/dotfiles/bin/omarchy-launch-terminal-tmux")
 #
-# Launches a fresh terminal, then: if the tmux-dev sessions (projects/id5) don't
-# exist, creates them; otherwise just attach. Defaults to attaching projects.
+# The scratchpad (SUPER+S) already runs inside foot, so it calls this script
+# with --attach instead of opening another terminal:
+#
+#   foot -e $HOME/Projects/dotfiles/bin/omarchy-launch-terminal-tmux --attach
 
-_tmp=$(mktemp) || exit 1
-trap 'rm -f "$_tmp"' EXIT
+if [[ "${1:-}" != --attach ]]; then
+  exec omarchy-launch-terminal bash "$HOME/Projects/dotfiles/bin/omarchy-launch-terminal-tmux" --attach
+fi
 
-cat >"$_tmp" <<'EOF'
-# Create the tmux-dev sessions if projects/id5 are missing.
+read_folders_file() {
+  local base_dir="$1"
+  local -n _folders="$2"
+  _folders=()
+
+  local folders_file="$base_dir/omarchy-tmux-folders"
+  [[ -f "$folders_file" ]] || return 0
+
+  local line
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+    _folders+=("$line")
+  done <"$folders_file"
+}
+
 create_sessions() {
-  local CONFIGS=(
-    "projects|$HOME/Projects|projects|yuler.dev|airvoice|typo|beep"
-    "id5|$HOME/Company|company|timeway|mall-mono|zhsq-mono"
+  local SESSIONS=(
+    "projects|$HOME/Projects|projects"
+    "id5|$HOME/Company|company"
   )
 
   local setup_session
@@ -62,11 +73,11 @@ create_sessions() {
     fi
   }
 
-  local cfg session_name base_dir window_name rest folders
-  local -a folders
-  for cfg in "${CONFIGS[@]}"; do
-    IFS='|' read -r session_name base_dir window_name rest <<<"$cfg"
-    IFS='|' read -r -a folders <<<"$rest"
+  local cfg session_name base_dir window_name
+  local -a folders=()
+  for cfg in "${SESSIONS[@]}"; do
+    IFS='|' read -r session_name base_dir window_name <<<"$cfg"
+    read_folders_file "$base_dir" folders
     setup_session "$session_name" "$base_dir" "$window_name" "${folders[@]}"
   done
 }
@@ -76,13 +87,10 @@ if ! tmux has-session -t =projects 2>/dev/null && ! tmux has-session -t =id5 2>/
   create_sessions
 fi
 
-# Attach: default to projects if present, otherwise let the user pick.
 if tmux has-session -t =projects 2>/dev/null; then
   exec tmux attach-session -t =projects
 fi
+
 sessions=$(tmux list-sessions -F '#{session_name}' 2>/dev/null || true)
 selected=$(gum choose --header "Attach to which session?" $sessions)
 exec tmux attach-session -t "=$selected"
-EOF
-
-omarchy-launch-terminal bash "$_tmp"
