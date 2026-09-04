@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Source: https://github.com/yuler/skills (skills/system-macro/scripts/app-wechat.sh)
+exec "$HOME/Projects/skills/skills/system-macro/scripts/app-wechat.sh" "$@"
