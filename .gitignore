@@ -7,3 +7,4 @@
 .gitconfig.*.local
 
 bin/jump-login
+bin/jump-login-fangke

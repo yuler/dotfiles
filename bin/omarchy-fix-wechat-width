@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# omarchy:summary=Fix WeChat window width
+
+# WeChat (AppImage/XWayland) should sit at a ~700px chat column on workspace 3,
+# but tiling shuffles its width around. This script snaps it back to
+# 0.373 x monitor width via hl.dsp.window.resize, which works on any layout
+# (the old colresize layoutmsg only works on the scrolling layout).
+#
+# Usage:
+#   omarchy-fix-wechat-width
+
+FRACTION="0.37"   # target width as a fraction of the monitor (~700px @1080p)
+CLASS="wechat"
+MAIN_TITLE="Weixin"
+
+find_window() {
+  # Prefer the main chat window ("Weixin"); fall back to any WeChat window.
+  local addr
+  addr=$(hyprctl clients -j 2>/dev/null | jq -r --arg c "$CLASS" --arg t "$MAIN_TITLE" \
+    '.[] | select(.class == $c and .title == $t) | .address' | head -n1)
+  if [[ -z "$addr" ]]; then
+    addr=$(hyprctl clients -j 2>/dev/null | jq -r --arg c "$CLASS" \
+      '.[] | select(.class == $c) | .address' | head -n1)
+  fi
+  printf '%s' "$addr"
+}
+
+addr=$(find_window)
+
+if [[ -z "$addr" ]]; then
+  echo "no WeChat window found" >&2
+  exit 1
+fi
+
+hyprctl dispatch "hl.dsp.focus({ window = \"address:$addr\" })" >/dev/null 2>&1 || \
+  hyprctl dispatch focuswindow "address:$addr" >/dev/null 2>&1 || true
+
+# Target width from the monitor showing the window; keep current height.
+read -r mon_id height <<<"$(hyprctl clients -j 2>/dev/null | jq -r --arg a "$addr" \
+  '.[] | select(.address == $a) | "\(.monitor) \(.size[1])"')"
+mon_w=$(hyprctl monitors -j 2>/dev/null | jq -r --argjson id "${mon_id:-0}" \
+  '.[] | select(.id == $id) | .width' | head -n1)
+
+[[ "$mon_w" =~ ^[0-9]+$ && "$height" =~ ^[0-9]+$ ]] || exit 1
+
+target_w=$(awk -v w="$mon_w" -v f="$FRACTION" 'BEGIN { printf "%d", w * f }')
+
+hyprctl dispatch "hl.dsp.window.resize({ window = \"address:$addr\", x = $target_w, y = $height })" >/dev/null 2>&1 || \
+  hyprctl dispatch resizewindowpixel "exact $target_w $height,address:$addr" >/dev/null 2>&1 || true
