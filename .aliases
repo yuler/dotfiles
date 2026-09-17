@@ -16,6 +16,9 @@ alias cp='cp -v'
 # ll
 alias ll='ls -al'
 
+# Reload the shell (i.e. invoke as a login shell)
+alias reload="exec ${SHELL} -l"
+
 # Directory Shortcuts
 alias d="cd ~/Documents"
 alias dl="cd ~/Downloads"
