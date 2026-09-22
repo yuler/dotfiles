@@ -18,6 +18,7 @@ rebase = true
 ignorecase = false
 pager = delta # refs: https://github.com/dandavison/delta
 compression = 1
+quotepath = false
 
 [credential "https://github.com"]
 useHttpPath = true
