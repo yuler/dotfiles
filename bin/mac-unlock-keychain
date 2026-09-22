@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+# Unlock the macOS login keychain after logging in remotely (e.g. over Tailscale SSH).
+# The keychain stays locked in non-interactive SSH sessions, which breaks tools that
+# rely on it for credentials, such as gh and cursor-agent. Prompt for the Mac login
+# password with gum and unlock the keychain so those tools can authenticate again.
+
+set -euo pipefail
+
+password=$(gum input --password --prompt "Mac login password: ")
+
+security unlock-keychain -p "$password" ~/Library/Keychains/login.keychain-db
+
+echo "login keychain unlocked"
