@@ -2,7 +2,7 @@
 
 # AI-assisted git commit.
 #
-# Try agents in order: pi → opencode → cursor-agent. Stop on first success;
+# Try agents in order: opencode → cursor-agent → pi. Stop on first success;
 # if all fail, exit with error. Note: this is an executable script (not a
 # sourced shell function), so we cannot rely on shell aliases like `gaa`/`gpo`.
 
@@ -365,7 +365,7 @@ agent_pi() {
 
   if command -v jq >/dev/null 2>&1; then
     tmp="$(mktemp "${TMPDIR:-/tmp}/aicommit-pi.XXXXXX")" || return 1
-    if ! run_with_timeout "$AICOMMIT_AGENT_TIMEOUT" bash -c "set -o pipefail; pi -p --mode json '$prompt' | tee '$tmp' | jq -j 'select(.type == \"message_update\" and .assistantMessageEvent.type == \"text_delta\") | .assistantMessageEvent.delta' 2>/dev/null; s=\$?; printf '\\n'; exit \"\$s\""; then
+    if ! run_with_timeout "$AICOMMIT_AGENT_TIMEOUT" bash -c "set -o pipefail; pi -p --no-session --mode json '$prompt' | tee '$tmp' | jq -j 'select(.type == \"message_update\" and .assistantMessageEvent.type == \"text_delta\") | .assistantMessageEvent.delta' 2>/dev/null; s=\$?; printf '\\n'; exit \"\$s\""; then
       status=$?
       rm -f "$tmp"
       if [[ $status -eq 124 ]]; then
@@ -378,7 +378,7 @@ agent_pi() {
     add_pi_usage "$tmp"
     rm -f "$tmp"
   else
-    if ! run_with_timeout "$AICOMMIT_AGENT_TIMEOUT" pi -p "$prompt"; then
+    if ! run_with_timeout "$AICOMMIT_AGENT_TIMEOUT" pi -p --no-session "$prompt"; then
       status=$?
       if [[ $status -eq 124 ]]; then
         echo "pi timed out after ${AICOMMIT_AGENT_TIMEOUT}s"
@@ -417,21 +417,19 @@ try_agent() {
 run_commit_agents() {
   local status
 
-  try_agent "pi" agent_pi && return 0
-  status=$?
-  was_interrupted "$status" && return 130
-
-  echo "Falling back to opencode..."
   try_agent "opencode" agent_opencode && return 0
   status=$?
   was_interrupted "$status" && return 130
-
   echo "Falling back to cursor-agent..."
   try_agent "cursor-agent" agent_cursor && return 0
   status=$?
   was_interrupted "$status" && return 130
+  echo "Falling back to pi..."
+  try_agent "pi" agent_pi && return 0
+  status=$?
+  was_interrupted "$status" && return 130
 
-  echo "All agents failed (pi, opencode, cursor-agent)"
+  echo "All agents failed (opencode, cursor-agent, pi)"
   return 1
 }
 

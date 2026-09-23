@@ -65,7 +65,7 @@ deadline = time.time() + 5
 while time.time() < deadline:
     if os.path.exists(marker):
         with open(marker) as f:
-            if "pi-start" in f.read():
+            if "opencode-start" in f.read():
                 break
     try:
         r, _, _ = select.select([fd], [], [], 0.1)
@@ -75,7 +75,7 @@ while time.time() < deadline:
         break
 else:
     os.kill(pid, 9)
-    sys.exit("FAIL: pi never started")
+    sys.exit("FAIL: opencode never started")
 
 time.sleep(0.2)
 os.write(fd, b"\x03")  # Ctrl+C on the pty
@@ -101,22 +101,22 @@ PY
 
 sleep 0.4
 
-if grep -q opencode-start "$MARKER"; then
-  echo "FAIL: continued to opencode after interrupt"
-  exit 1
-fi
 if grep -q cursor-start "$MARKER"; then
   echo "FAIL: continued to cursor-agent after interrupt"
   exit 1
 fi
-if grep -q pi-end "$MARKER"; then
-  echo "FAIL: pi kept running after interrupt"
+if grep -q pi-start "$MARKER"; then
+  echo "FAIL: continued to pi after interrupt"
+  exit 1
+fi
+if grep -q opencode-end "$MARKER"; then
+  echo "FAIL: opencode kept running after interrupt"
   exit 1
 fi
 
-pi_pid="$(awk '/pi-start/{print $2; exit}' "$MARKER")"
-if [[ -n "$pi_pid" ]] && kill -0 "$pi_pid" 2>/dev/null; then
-  echo "FAIL: pi pid $pi_pid still running after interrupt"
+opencode_pid="$(awk '/opencode-start/{print $2; exit}' "$MARKER")"
+if [[ -n "$opencode_pid" ]] && kill -0 "$opencode_pid" 2>/dev/null; then
+  echo "FAIL: opencode pid $opencode_pid still running after interrupt"
   exit 1
 fi
 
