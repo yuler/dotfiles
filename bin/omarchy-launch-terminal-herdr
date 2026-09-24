@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+# omarchy:summary=Launch or attach to the persistent herdr session in a terminal (floating)
+#
+# OVERRIDE of Omarchy's ~/omarchy/bin/omarchy-launch-terminal-herdr.
+#
+# Omarchy's original runs `omarchy-launch-terminal herdr`, which leaves the
+# foot window with class=foot, so no window rule can tell it apart from a
+# plain terminal. This wrapper adds --app-id=herdr, which the `^herdr$`
+# float+center rules in ~/.config/hypr/hyprland.lua match, so opening/closing
+# herdr never shifts the tiling layout.
+#
+# NOTE: ~/Projects/dotfiles/bin is NOT on Hyprland's runtime PATH (only the
+# interactive shell's PATH), so PATH shadowing won't work here. This override is
+# wired up from ~/.config/hypr/bindings.lua, which rebinds SUPER+CTRL+RETURN
+# directly to this file's absolute path (same pattern as
+# bin/omarchy-launch-terminal-tmux).
+
+exec omarchy-launch-terminal --app-id=herdr herdr
