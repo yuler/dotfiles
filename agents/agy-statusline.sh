@@ -130,7 +130,7 @@ def main():
         mode_tag = f"\033[2m⚙️ [{raw_cycle_mode}]\033[0m"
 
     # Assemble Left Side: Model + [yolo] + [plan/edit]
-    left_items = [f"\033[36m🤖 {model_name}\033[0m"]
+    left_items = [f"\033[36mAGY · {model_name}\033[0m"]
     if yolo_tag:
         left_items.append(yolo_tag)
     if mode_tag:

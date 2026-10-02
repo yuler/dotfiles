@@ -70,3 +70,7 @@ export NI_GLOBAL_AGENT="pnpm"
 
 # Added by Windsurf
 export PATH="/Users/yule/.codeium/windsurf/bin:$PATH"
+
+
+# Added by Antigravity CLI installer
+export PATH="/Users/yule/.local/bin:$PATH"
