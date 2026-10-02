@@ -40,6 +40,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import time
@@ -153,6 +154,17 @@ def read_access_token() -> str:
             continue
         if token:
             return token
+    if sys.platform == "darwin":
+        try:
+            out = subprocess.run(
+                ["security", "find-generic-password", "-s", "cursor-access-token", "-w"],
+                capture_output=True,
+                text=True,
+                timeout=1,
+            )
+            return out.stdout.strip() if out.returncode == 0 else ""
+        except Exception:
+            pass
     return ""
 
 
