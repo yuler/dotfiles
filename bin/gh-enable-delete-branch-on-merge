@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# DEPRECATED: Use gh-setup-repo instead, which covers more settings.
+echo "⚠️  Deprecated: use gh-setup-repo instead" >&2
+echo "" >&2
+
 # Get repo
 repo=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 

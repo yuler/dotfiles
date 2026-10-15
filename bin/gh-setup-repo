@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# Get repo
+repo=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+
+echo "Configuring $repo..."
+
+# Apply all settings in one PATCH call
+result=$(gh api -X PATCH "repos/$repo" \
+  -f delete_branch_on_merge=true \
+  -f allow_squash_merge=true \
+  -F allow_merge_commit=false \
+  -F allow_rebase_merge=false \
+  --jq '[.delete_branch_on_merge, .allow_squash_merge, .allow_merge_commit, .allow_rebase_merge]')
+
+delete_branch=$(echo "$result" | jq -r '.[0]')
+squash=$(echo "$result" | jq -r '.[1]')
+merge_commit=$(echo "$result" | jq -r '.[2]')
+rebase=$(echo "$result" | jq -r '.[3]')
+
+ok=true
+
+if [ "$delete_branch" = "true" ]; then
+  echo "  ✓ Auto-delete branch on merge"
+else
+  echo "  ✗ Failed to enable auto-delete branch on merge"
+  ok=false
+fi
+
+if [ "$squash" = "true" ] && [ "$merge_commit" = "false" ] && [ "$rebase" = "false" ]; then
+  echo "  ✓ Default merge method: squash"
+else
+  echo "  ✗ Failed to set default merge method to squash"
+  ok=false
+fi
+
+if [ "$ok" = false ]; then
+  echo ""
+  echo "Some settings failed. Manually configure at: https://github.com/$repo/settings#merge-button-settings"
+fi
