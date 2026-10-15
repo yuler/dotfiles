@@ -57,3 +57,6 @@ o.window({ class = "^magpie$", title = "^magpie$" }, { float = true, center = tr
 o.window("^herdr$", { float = true })
 o.window("^herdr$", { center = true })
 o.window("^herdr$", { size = { 1400, 900 } })
+
+-- Typo indicator window rule.
+require("hypr.typo")
