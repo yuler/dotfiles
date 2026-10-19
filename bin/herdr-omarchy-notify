@@ -1,0 +1,309 @@
+#!/usr/bin/env bash
+# Omarchy notifications for Herdr agents. A click focuses that agent pane.
+#
+# Herdr's own toasts call notify-send and cannot carry Omarchy's click command,
+# so [ui.toast] delivery is "off" and this watcher sends the toast instead.
+# [ui.sound] is unchanged.
+#
+# Started from ~/.config/hypr/autostart.lua.
+
+set -euo pipefail
+
+SOCK="${XDG_CONFIG_HOME:-$HOME/.config}/herdr/herdr.sock"
+JUMP="$(cd "$(dirname "$0")" && pwd)/herdr-omarchy-jump"
+LOCK="${XDG_RUNTIME_DIR:-/tmp}/herdr-omarchy-notify.lock"
+PIPE_DIR="${XDG_RUNTIME_DIR:-/tmp}/herdr-omarchy-notify"
+DELAY_SEC=1
+REFRESH_SEC=10
+
+log() {
+  printf '[herdr-omarchy-notify] %s\n' "$*" >&2
+}
+
+declare -A status=() cwd=() name=() ws_label=() replace_id=()
+declare -A pending_at=() pending_kind=() pending_agent=() pending_ws=() pending_title=()
+panes=()
+socat_pid=
+
+acquire_lock() {
+  mkdir -p "$(dirname "$LOCK")"
+  exec 9>"$LOCK"
+  if ! flock -n 9; then
+    log "another instance is already running; exiting"
+    exit 0
+  fi
+  printf '%s\n' $$ >&9
+}
+
+refresh_catalog() {
+  local pane st agent cw ws id label
+  panes=()
+  while IFS=$'\x1f' read -r pane st agent cw ws; do
+    [[ -n $pane ]] || continue
+    panes+=("$pane")
+    [[ -n $cw ]] && cwd["$pane"]=$cw
+    if [[ -z ${name[$pane]+x} && -n $agent ]]; then
+      name["$pane"]=$agent
+    fi
+    if [[ -z ${status[$pane]+x} && -n $st ]]; then
+      status["$pane"]=$st
+    fi
+  done < <(herdr agent list | jq -r '.result.agents[] | [.pane_id, (.agent_status // ""), (.agent // ""), (.cwd // ""), (.workspace_id // "")] | join("\u001f")')
+
+  while IFS=$'\x1f' read -r id label; do
+    [[ -n $id ]] || continue
+    ws_label["$id"]=$label
+  done < <(herdr workspace list | jq -r '.result.workspaces[] | [.workspace_id, (.label // .workspace_id)] | join("\u001f")')
+}
+
+pane_set() {
+  if (($# == 0)); then
+    return 0
+  fi
+  printf '%s\n' "$@" | sort | paste -sd, -
+}
+
+build_request() {
+  local panes_json
+  if (($# == 0)); then
+    panes_json='[]'
+  else
+    panes_json=$(printf '%s\n' "$@" | jq -R . | jq -s .)
+  fi
+  jq -nc --argjson panes "$panes_json" '{
+    id: "herdr-omarchy-notify",
+    method: "events.subscribe",
+    params: {
+      subscriptions: (
+        [
+          {type: "pane.created"},
+          {type: "pane.closed"},
+          {type: "pane.moved"},
+          {type: "pane.agent_detected"}
+        ] + [$panes[] | {type: "pane.agent_status_changed", pane_id: .}]
+      )
+    }
+  }'
+}
+
+stop_socat() {
+  if [[ -n $socat_pid ]] && kill -0 "$socat_pid" 2>/dev/null; then
+    kill "$socat_pid" 2>/dev/null || true
+    wait "$socat_pid" 2>/dev/null || true
+  fi
+  socat_pid=
+  exec 3>&- 4<&- || true
+}
+
+start_sub() {
+  local req ack
+  stop_socat
+  mkdir -p "$PIPE_DIR"
+  rm -f "$PIPE_DIR/in" "$PIPE_DIR/out"
+  mkfifo "$PIPE_DIR/in" "$PIPE_DIR/out"
+  socat STDIO "UNIX-CONNECT:${SOCK}" <"$PIPE_DIR/in" >"$PIPE_DIR/out" &
+  socat_pid=$!
+  exec 3>"$PIPE_DIR/in"
+  exec 4<"$PIPE_DIR/out"
+  req=$(build_request "$@")
+  printf '%s\n' "$req" >&3
+  if ! IFS= read -r -t 5 ack <&4; then
+    log "no subscribe ack"
+    return 1
+  fi
+  if jq -e '.error' >/dev/null <<<"$ack"; then
+    log "subscribe failed: $(jq -r '.error.message // .error.code' <<<"$ack")"
+    return 1
+  fi
+}
+
+notify_pane() {
+  local pane_id=$1 kind=$2 agent=$3 workspace_id=$4 title=${5:-}
+  local timeout=15000 workspace project body="" part previous out
+  local parts=()
+  if [[ -n $title ]]; then
+    timeout=30000
+  elif [[ $kind == attention ]]; then
+    title="$agent needs attention"
+    timeout=30000
+  else
+    title="$agent finished"
+  fi
+  workspace=${ws_label[$workspace_id]:-}
+  project=
+  if [[ -n ${cwd[$pane_id]:-} ]]; then
+    project=$(basename "${cwd[$pane_id]}")
+  fi
+  for part in "$workspace" "$project"; do
+    [[ -n $part ]] || continue
+    [[ ${#parts[@]} -gt 0 && $part == "${parts[-1]}" ]] && continue
+    parts+=("$part")
+  done
+  if ((${#parts[@]})); then
+    for part in "${parts[@]}"; do
+      if [[ -z $body ]]; then
+        body=$part
+      else
+        body+=" · $part"
+      fi
+    done
+  fi
+  local cmd=(omarchy notification send --app-name herdr -u normal -t "$timeout" -p)
+  previous=${replace_id[$pane_id]:-}
+  if [[ -n $previous ]]; then
+    cmd+=(-r "$previous")
+  fi
+  cmd+=("$title" "$body" --exec "$JUMP" "$pane_id")
+  if ! out=$("${cmd[@]}"); then
+    log "notify failed for $pane_id"
+    return 0
+  fi
+  out=${out##* }
+  [[ -n $out ]] && replace_id["$pane_id"]=$out
+  log "shown $title ($pane_id)"
+}
+
+schedule() {
+  local pane_id=$1
+  pending_at["$pane_id"]=$((SECONDS + DELAY_SEC))
+  pending_kind["$pane_id"]=$2
+  pending_agent["$pane_id"]=$3
+  pending_ws["$pane_id"]=${4:-}
+  pending_title["$pane_id"]=${5:-}
+}
+
+clear_pending() {
+  unset 'pending_at[$1]' 'pending_kind[$1]' 'pending_agent[$1]' 'pending_ws[$1]' 'pending_title[$1]'
+}
+
+fire_due() {
+  local pane kind agent ws title
+  ((${#pending_at[@]})) || return 0
+  for pane in "${!pending_at[@]}"; do
+    ((pending_at[$pane] <= SECONDS)) || continue
+    kind=${pending_kind[$pane]}
+    agent=${pending_agent[$pane]}
+    ws=${pending_ws[$pane]:-}
+    title=${pending_title[$pane]:-}
+    clear_pending "$pane"
+    notify_pane "$pane" "$kind" "$agent" "$ws" "$title"
+  done
+}
+
+on_status() {
+  local line=$1 pane st shown prev agent ws
+  pane=$(jq -r '.data.pane_id // .pane_id // empty' <<<"$line")
+  st=$(jq -r '.data.agent_status // .agent_status // empty' <<<"$line")
+  [[ -n $pane && -n $st ]] || return 0
+  prev=${status[$pane]:-}
+  status["$pane"]=$st
+  shown=$(jq -r '.data.display_agent // .data.agent // .display_agent // .agent // empty' <<<"$line")
+  [[ -n $shown ]] && name["$pane"]=$shown
+  agent=${name[$pane]:-agent}
+  ws=$(jq -r '.data.workspace_id // .workspace_id // empty' <<<"$line")
+  [[ -n $prev && $st != "$prev" ]] || return 0
+  if [[ $st == blocked ]]; then
+    schedule "$pane" attention "$agent" "$ws"
+  elif [[ $st == done || ($st == idle && $prev == working) ]]; then
+    schedule "$pane" finished "$agent" "$ws"
+  elif [[ $st == working ]]; then
+    clear_pending "$pane"
+  fi
+}
+
+needs_resubscribe() {
+  case $1 in
+  pane.created | pane.closed | pane.moved | pane.agent_detected | pane_created | pane_closed | pane_moved | pane_agent_detected)
+    return 0
+    ;;
+  *)
+    return 1
+    ;;
+  esac
+}
+
+handle_line() {
+  local line=$1 event
+  event=$(jq -r '.error.code // .event // .data.type // .type // empty' <<<"$line")
+  if [[ $event == events_lost ]]; then
+    log "events_lost"
+    return 1
+  fi
+  if needs_resubscribe "$event"; then
+    return 1
+  fi
+  if [[ -n $(jq -r '.data.agent_status // .agent_status // empty' <<<"$line") ]]; then
+    on_status "$line"
+  fi
+}
+
+send_test() {
+  local pane_id=${1:-} agent ws
+  refresh_catalog
+  if [[ -z $pane_id ]]; then
+    pane_id=$(herdr agent list | jq -r 'first(.result.agents[] | select(.focused) | .pane_id) // .result.agents[0].pane_id // empty')
+  fi
+  [[ -n $pane_id ]] || {
+    log "no herdr agent to use for --test"
+    exit 1
+  }
+  agent=${name[$pane_id]:-agent}
+  ws=${pane_id%%:*}
+  notify_pane "$pane_id" attention "$agent" "$ws" "点击跳到 $agent"
+}
+
+run() {
+  acquire_lock
+  local line rc subscribed now_set deadline
+  while true; do
+    if ! refresh_catalog; then
+      log "reconnecting: catalog failed"
+      sleep 1
+      continue
+    fi
+    if ! start_sub "${panes[@]}"; then
+      log "reconnecting: subscribe failed"
+      stop_socat
+      sleep 1
+      continue
+    fi
+    subscribed=$(pane_set "${panes[@]}")
+    log "subscribed to ${#panes[@]} agent panes"
+    deadline=$((SECONDS + REFRESH_SEC))
+    while true; do
+      if ((SECONDS >= deadline)); then
+        refresh_catalog || true
+        now_set=$(pane_set "${panes[@]}")
+        if [[ $now_set != "$subscribed" ]]; then
+          log "reconnecting: pane set changed"
+          break
+        fi
+        deadline=$((SECONDS + REFRESH_SEC))
+      fi
+      fire_due
+      rc=0
+      IFS= read -r -t 0.2 line <&4 || rc=$?
+      if ((rc > 128)); then
+        continue
+      elif ((rc != 0)); then
+        log "reconnecting: socket closed"
+        break
+      fi
+      [[ -n $line ]] || continue
+      if ! handle_line "$line"; then
+        log "reconnecting: resubscribe"
+        break
+      fi
+    done
+    stop_socat
+    sleep 1
+  done
+}
+
+if [[ ${1:-} == --test ]]; then
+  send_test "${2:-}"
+  exit 0
+fi
+
+trap stop_socat EXIT
+run
