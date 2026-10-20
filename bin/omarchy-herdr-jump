@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+# Focus a Herdr agent pane and raise the Herdr window, including the scratchpad.
+# Invoked by Omarchy when an omarchy-herdr-notify toast is clicked.
+set -euo pipefail
+
+pane="${1:?usage: omarchy-herdr-jump <pane-id>}"
+if [[ ! $pane =~ ^w[0-9A-Za-z]+:p[0-9A-Za-z]+$ ]]; then
+  echo "invalid pane id: $pane" >&2
+  exit 1
+fi
+
+SOCK="${XDG_CONFIG_HOME:-$HOME/.config}/herdr/herdr.sock"
+
+herdr agent focus "$pane" >/dev/null 2>&1 || true
+if [[ -S $SOCK ]]; then
+  jq -nc --arg pane "$pane" '{id: "omarchy-herdr-jump", method: "pane.focus", params: {pane_id: $pane}}' |
+    socat -T 1 STDIO "UNIX-CONNECT:${SOCK}" >/dev/null 2>&1 || true
+fi
+
+herdr_addr() {
+  local addr fpid
+  addr=$(
+    hyprctl clients -j 2>/dev/null |
+      jq -r 'first(.[] | select(.class == "herdr") | .address) // empty'
+  )
+  if [[ -n $addr ]]; then
+    printf '%s\n' "$addr"
+    return 0
+  fi
+  for fpid in $(hyprctl clients -j 2>/dev/null | jq -r '.[] | select(.class == "foot") | .pid // empty'); do
+    if pgrep -P "$fpid" -x herdr >/dev/null 2>&1; then
+      hyprctl clients -j 2>/dev/null |
+        jq -r --argjson pid "$fpid" 'first(.[] | select(.pid == $pid) | .address) // empty'
+      return 0
+    fi
+  done
+}
+
+addr="$(herdr_addr)"
+if [[ -z $addr ]]; then
+  "$HOME/Projects/dotfiles/bin/omarchy-launch-terminal-herdr" >/dev/null 2>&1 &
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    sleep 0.3
+    addr="$(herdr_addr)"
+    [[ -n $addr ]] && break
+  done
+fi
+
+if [[ -n $addr ]]; then
+  hyprctl dispatch "hl.dsp.focus({ window = \"address:$addr\" })" >/dev/null 2>&1 ||
+    hyprctl dispatch focuswindow "address:$addr" >/dev/null 2>&1 || true
+  ws_name=$(
+    hyprctl clients -j 2>/dev/null |
+      jq -r --arg addr "$addr" 'first(.[] | select(.address == $addr) | .workspace.name) // empty'
+  )
+  if [[ $ws_name == special:* ]]; then
+    active_special=$(
+      hyprctl monitors -j 2>/dev/null |
+        jq -r 'first(.[] | select(.focused) | .specialWorkspace.name) // empty'
+    )
+    if [[ $active_special != "$ws_name" ]]; then
+      spec=${ws_name#special:}
+      hyprctl dispatch "hl.dsp.workspace.toggle_special(\"$spec\")" >/dev/null 2>&1 ||
+        hyprctl dispatch togglespecialworkspace "$spec" >/dev/null 2>&1 || true
+      hyprctl dispatch "hl.dsp.focus({ window = \"address:$addr\" })" >/dev/null 2>&1 ||
+        hyprctl dispatch focuswindow "address:$addr" >/dev/null 2>&1 || true
+    fi
+  fi
+fi

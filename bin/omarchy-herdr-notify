@@ -10,17 +10,17 @@
 set -euo pipefail
 
 SOCK="${XDG_CONFIG_HOME:-$HOME/.config}/herdr/herdr.sock"
-JUMP="$(cd "$(dirname "$0")" && pwd)/herdr-omarchy-jump"
-LOCK="${XDG_RUNTIME_DIR:-/tmp}/herdr-omarchy-notify.lock"
-PIPE_DIR="${XDG_RUNTIME_DIR:-/tmp}/herdr-omarchy-notify"
+JUMP="$(cd "$(dirname "$0")" && pwd)/omarchy-herdr-jump"
+LOCK="${XDG_RUNTIME_DIR:-/tmp}/omarchy-herdr-notify.lock"
+PIPE_DIR="${XDG_RUNTIME_DIR:-/tmp}/omarchy-herdr-notify"
 DELAY_SEC=1
 REFRESH_SEC=10
 
 log() {
-  printf '[herdr-omarchy-notify] %s\n' "$*" >&2
+  printf '[omarchy-herdr-notify] %s\n' "$*" >&2
 }
 
-declare -A status=() cwd=() name=() ws_label=() replace_id=()
+declare -A status=() cwd=() name=() ws_label=() tab_label=() pane_tab=() pane_label=() replace_id=()
 declare -A pending_at=() pending_kind=() pending_agent=() pending_ws=() pending_title=()
 panes=()
 socat_pid=
@@ -36,19 +36,32 @@ acquire_lock() {
 }
 
 refresh_catalog() {
-  local pane st agent cw ws id label
+  local pane st agent cw ws tab p_name id label
   panes=()
-  while IFS=$'\x1f' read -r pane st agent cw ws; do
+  while IFS=$'\x1f' read -r pane st agent cw ws tab p_name; do
     [[ -n $pane ]] || continue
     panes+=("$pane")
     [[ -n $cw ]] && cwd["$pane"]=$cw
-    if [[ -z ${name[$pane]+x} && -n $agent ]]; then
-      name["$pane"]=$agent
-    fi
+    [[ -n $tab ]] && pane_tab["$pane"]=$tab
+    [[ -n $p_name ]] && pane_label["$pane"]=$p_name
+    [[ -n $agent ]] && name["$pane"]=$agent
     if [[ -z ${status[$pane]+x} && -n $st ]]; then
       status["$pane"]=$st
     fi
-  done < <(herdr agent list | jq -r '.result.agents[] | [.pane_id, (.agent_status // ""), (.agent // ""), (.cwd // ""), (.workspace_id // "")] | join("\u001f")')
+  done < <(herdr agent list | jq -r '.result.agents[] | [.pane_id, (.agent_status // ""), (.display_agent // .agent // ""), (.cwd // ""), (.workspace_id // ""), (.tab_id // ""), (.name // .label // "")] | join("\u001f")')
+
+  while IFS=$'\x1f' read -r pane tab p_name; do
+    [[ -n $pane ]] || continue
+    [[ -n $tab ]] && pane_tab["$pane"]=$tab
+    if [[ -n $p_name ]]; then
+      pane_label["$pane"]=$p_name
+    fi
+  done < <(herdr pane list | jq -r '.result.panes[] | [.pane_id, (.tab_id // ""), (.label // "")] | join("\u001f")')
+
+  while IFS=$'\x1f' read -r id label; do
+    [[ -n $id ]] || continue
+    tab_label["$id"]=$label
+  done < <(herdr tab list | jq -r '.result.tabs[] | [.tab_id, (.label // .tab_id)] | join("\u001f")')
 
   while IFS=$'\x1f' read -r id label; do
     [[ -n $id ]] || continue
@@ -71,7 +84,7 @@ build_request() {
     panes_json=$(printf '%s\n' "$@" | jq -R . | jq -s .)
   fi
   jq -nc --argjson panes "$panes_json" '{
-    id: "herdr-omarchy-notify",
+    id: "omarchy-herdr-notify",
     method: "events.subscribe",
     params: {
       subscriptions: (
@@ -119,22 +132,44 @@ start_sub() {
 
 notify_pane() {
   local pane_id=$1 kind=$2 agent=$3 workspace_id=$4 title=${5:-}
-  local timeout=15000 workspace project body="" part previous out
+  local timeout=15000 workspace tab_id tab plabel target="" body="" part previous out
   local parts=()
+  tab_id=${pane_tab[$pane_id]:-}
+  if [[ -z $tab_id || -z ${tab_label[$tab_id]:-} ]]; then
+    refresh_catalog || true
+    tab_id=${pane_tab[$pane_id]:-}
+  fi
+  tab=${tab_label[$tab_id]:-}
+  plabel=${pane_label[$pane_id]:-}
+  if [[ -z $tab && -n ${cwd[$pane_id]:-} ]]; then
+    tab=$(basename "${cwd[$pane_id]}")
+  fi
+  target=$tab
+  if [[ -n $plabel && $plabel != "$tab" && $plabel != "$agent" ]]; then
+    if [[ -n $target ]]; then
+      target+=" / $plabel"
+    else
+      target=$plabel
+    fi
+  fi
   if [[ -n $title ]]; then
     timeout=30000
   elif [[ $kind == attention ]]; then
-    title="$agent needs attention"
+    if [[ -n $target ]]; then
+      title="$target · $agent needs attention"
+    else
+      title="$agent needs attention"
+    fi
     timeout=30000
   else
-    title="$agent finished"
+    if [[ -n $target ]]; then
+      title="$target · $agent finished"
+    else
+      title="$agent finished"
+    fi
   fi
   workspace=${ws_label[$workspace_id]:-}
-  project=
-  if [[ -n ${cwd[$pane_id]:-} ]]; then
-    project=$(basename "${cwd[$pane_id]}")
-  fi
-  for part in "$workspace" "$project"; do
+  for part in "$workspace" "$target"; do
     [[ -n $part ]] || continue
     [[ ${#parts[@]} -gt 0 && $part == "${parts[-1]}" ]] && continue
     parts+=("$part")
@@ -249,7 +284,7 @@ send_test() {
   }
   agent=${name[$pane_id]:-agent}
   ws=${pane_id%%:*}
-  notify_pane "$pane_id" attention "$agent" "$ws" "点击跳到 $agent"
+  notify_pane "$pane_id" attention "$agent" "$ws"
 }
 
 run() {

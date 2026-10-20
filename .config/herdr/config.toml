@@ -104,7 +104,7 @@ agent_panel_sort = "priority"
 # herdr = show in-app toasts only
 # terminal = ask the outer terminal to show a desktop notification
 # system = ask the OS notification service directly
-# Desktop toasts are sent by bin/herdr-omarchy-notify so a click can focus
+# Desktop toasts are sent by bin/omarchy-herdr-notify so a click can focus
 # the agent pane. Herdr's notify-send path cannot carry that click.
 [ui.toast]
 delivery = "off"
