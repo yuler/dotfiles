@@ -29,4 +29,5 @@ Personal dotfiles for shell, git, editor, and desktop tooling. Config files live
 - Markdown tables must be auto-aligned (pad columns so pipes line up).
 - Do not use superpower or other speculative-driven skills unless explicitly declared.
 - If something is unclear, ask questions. Keep everything from design to code as simple as possible.
+- Keep each agent-authored file under 5,000 tokens (bytes ÷ 4). Lockfiles and generated code sit outside this limit. Split a file that would cross it by responsibility: one module per concern, helpers and types in a sibling file, and a one-line pointer in the original naming the new path.
 
