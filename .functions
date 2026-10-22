@@ -91,3 +91,12 @@ gwd() {
   fi
 }
 
+# Neovim (like Omarchy: default to current directory when no arguments)
+n() {
+  if [ "$#" -eq 0 ]; then
+    command nvim .
+  else
+    command nvim "$@"
+  fi
+}
+

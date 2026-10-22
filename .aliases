@@ -128,9 +128,6 @@ alias headers=httpstat
 alias npkill='npx npkill -s size'
 alias kill-tabs='npx kill-tabs'
 
-# Neovim (like Omarchy)
-alias n='nvim'
-
 # AI agent CI
 alias c='opencode'
 alias ca='cursor-agent'
