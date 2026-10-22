@@ -8,7 +8,8 @@ Personal dotfiles for shell, git, editor, and desktop tooling. Config files live
 
 | Path            | Purpose                                      |
 | --------------- | -------------------------------------------- |
-| `install.sh`    | Symlink dotfiles into home directory         |
+| `install.sh`    | Interactive modular installer (using gum)    |
+| `install/`      | Modular install scripts (shell, git, etc.)   |
 | `brew.sh`       | Install CLI and GUI packages                 |
 | `npms.sh`       | Install global npm CLIs                      |
 | `bin/`          | Helper scripts (git, omarchy, `gen`, etc.)   |
@@ -17,7 +18,7 @@ Personal dotfiles for shell, git, editor, and desktop tooling. Config files live
 | `.exports`      | Environment variables                        |
 | `.gitconfig`    | Git config (local overrides in `*.local`)    |
 | `.vscode/`      | VS Code settings and keybindings             |
-| `agents/`       | Agent-related scripts                        |
+| `agents/`       | Agent scripts and USER.md profile            |
 | `tests/`        | Shell script tests                           |
 
 ## Rules
