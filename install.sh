@@ -18,6 +18,7 @@ Available modules:
   shell            Shell configuration (.exports, .aliases, .functions)
   git              Git configuration (.gitconfig, .gitconfig.local)
   agents           AI Agent profile & rules (USER.md across AI harnesses)
+  hyprland         Hyprland desktop & scratchpad configuration
   editors          Editor settings (VS Code, Cursor)
   rails            Ruby on Rails templates (.railsrc, rails_template.rb)
   packages         Package manager scripts (brew, npms, ruby, mas)
@@ -34,6 +35,7 @@ declare -A MODULE_SCRIPTS=(
   ["Shell"]="shell.sh"
   ["Git"]="git.sh"
   ["Agents"]="agents.sh"
+  ["Hyprland"]="hyprland.sh"
   ["Editors"]="editors.sh"
   ["Rails"]="rails.sh"
   ["Packages"]="packages.sh"
@@ -43,6 +45,7 @@ declare -A MODULE_SCRIPTS=(
 OPT_SHELL="🐚 Shell    - Aliases, exports, functions"
 OPT_GIT="🐙 Git      - Git config & local includes"
 OPT_AGENTS="🤖 Agents   - USER.md profile & AI harnesses"
+OPT_HYPRLAND="🪟 Hyprland - Hyprland configs, scratchpad & layout"
 OPT_EDITORS="💻 Editors  - VS Code & Cursor settings/keybindings"
 OPT_RAILS="💎 Rails    - .railsrc & rails_template.rb"
 OPT_PACKAGES="📦 Packages - Package managers (brew, npm, etc.)"
@@ -68,7 +71,7 @@ while [ $# -gt 0 ]; do
       exit 0
       ;;
     -a|--all)
-      TARGET_MODULES=("Shell" "Git" "Agents" "Editors" "Rails")
+      TARGET_MODULES=("Shell" "Git" "Agents" "Hyprland" "Editors" "Rails")
       shift
       ;;
     shell|Shell)
@@ -81,6 +84,10 @@ while [ $# -gt 0 ]; do
       ;;
     agents|Agents)
       TARGET_MODULES+=("Agents")
+      shift
+      ;;
+    hyprland|Hyprland|hypr|Hypr)
+      TARGET_MODULES+=("Hyprland")
       shift
       ;;
     editors|Editors|vscode|VSCode)
@@ -118,11 +125,12 @@ if [ ${#TARGET_MODULES[@]} -eq 0 ]; then
 
     # Present multi-select menu with core modules pre-selected
     CHOICES=$(gum choose --no-limit \
-      --selected="$OPT_SHELL,$OPT_GIT,$OPT_AGENTS" \
+      --selected="$OPT_SHELL,$OPT_GIT,$OPT_AGENTS,$OPT_HYPRLAND" \
       --header="Select modules to install (Space to toggle, Enter to confirm):" \
       "$OPT_SHELL" \
       "$OPT_GIT" \
       "$OPT_AGENTS" \
+      "$OPT_HYPRLAND" \
       "$OPT_EDITORS" \
       "$OPT_RAILS" \
       "$OPT_PACKAGES") || true
@@ -137,6 +145,7 @@ if [ ${#TARGET_MODULES[@]} -eq 0 ]; then
         *"Shell"*)    TARGET_MODULES+=("Shell") ;;
         *"Git"*)      TARGET_MODULES+=("Git") ;;
         *"Agents"*)   TARGET_MODULES+=("Agents") ;;
+        *"Hyprland"*) TARGET_MODULES+=("Hyprland") ;;
         *"Editors"*)  TARGET_MODULES+=("Editors") ;;
         *"Rails"*)    TARGET_MODULES+=("Rails") ;;
         *"Packages"*) TARGET_MODULES+=("Packages") ;;

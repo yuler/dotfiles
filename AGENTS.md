@@ -18,6 +18,7 @@ Personal dotfiles for shell, git, editor, and desktop tooling. Config files live
 | `.exports`      | Environment variables                        |
 | `.gitconfig`    | Git config (local overrides in `*.local`)    |
 | `.vscode/`      | VS Code settings and keybindings             |
+| `.config/`      | Hyprland and herdr desktop tooling configs   |
 | `agents/`       | Agent scripts and USER.md profile            |
 | `tests/`        | Shell script tests                           |
 
