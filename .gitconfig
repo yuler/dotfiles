@@ -21,9 +21,8 @@ compression = 1
 quotepath = false
 
 [credential "https://github.com"]
-useHttpPath = true
-helper = 
-helper = !/usr/bin/gh auth git-credential
+usehttppath = true
+helper = !gh auth git-credential
 
 [credential "https://gist.github.com"]
 helper = 
@@ -32,10 +31,10 @@ helper = !/usr/bin/gh auth git-credential
 [include]
 path = ~/.gitconfig.includes
 [credential]
-	helper = store
+helper = store
 [safe]
-	directory = *
+directory = *
 
 [includeIf "gitdir:~/Company/"]
-	path = ~/.gitconfig.company
+path = ~/.gitconfig.company
 
