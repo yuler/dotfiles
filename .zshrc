@@ -74,3 +74,8 @@ export PATH="/Users/yule/.codeium/windsurf/bin:$PATH"
 
 # Added by Antigravity CLI installer
 export PATH="/Users/yule/.local/bin:$PATH"
+
+# Termius sets MOBILE_CONNECT=1. Other SSH clients skip this.
+if [[ -n ${MOBILE_CONNECT:-} && -z ${TMUX:-} ]]; then
+  mobile-ssh-startup
+fi

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Interactive SSH from a phone: unlock the Mac keychain, then attach tmux
+# so closing Termius does not kill the agent.
+set -euo pipefail
+
+if [[ "$(uname -s)" == Darwin ]]; then
+  mac-unlock-keychain
+fi
+
+exec tmux-mobile
