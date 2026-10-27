@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Phone SSH: attach a tmux session, or create it.
+# Desktop stays on herdr. Closing Termius drops the client; the session keeps running.
+set -euo pipefail
+
+session="${1:-agent}"
+
+exec tmux new-session -A -s "$session"
