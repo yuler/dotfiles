@@ -15,6 +15,9 @@ dofile((os.getenv("OMARCHY_PATH") or "/usr/share/omarchy") .. "/default/hypr/boo
 -- omarchy_preinstalled_bindings = false
 
 -- Load Omarchy defaults.
+-- qconsole_compat must run first: it rewrites Omarchy's qconsole module so
+-- Hyprland no longer sees the deprecated on_created_empty workspace rule.
+require("hypr.qconsole_compat")
 require("default.hypr.omarchy")
 
 -- Put your personal overrides in these files. They're loaded after Omarchy's
@@ -33,7 +36,8 @@ require("default.hypr.toggles")
 -- o.window("qemu", { workspace = "5" })
 
 -- WeChat: start at a ~700px chat column in the scrolling layout (workspace 3).
-o.window("wechat", { scrolling_width = 0.37 })
+-- Keep new-message activation from stealing focus (same as Telegram).
+o.window("wechat", { scrolling_width = 0.37, focus_on_activate = false })
 
 -- WeChat popups (image/video preview, etc.): float them instead of tiling
 -- them. `negative:` passes when the regex fails, so the main "Weixin"

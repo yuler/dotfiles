@@ -17,7 +17,7 @@ sleep 2
 rm -f "$HOME/.local/state/omarchy/workspace-layouts"/{1,2,3,4}.lua 2>/dev/null || true
 
 # ---- Step 1: Workspace 10 (key 0) - magpie ----
-hyprctl dispatch 'hl.dsp.focus({ workspace = "10" })'
+hyprctl dispatch 'hl.dsp.focus({ workspace = "0" })'
 sleep 2
 setsid uwsm-app -- magpie &
 sleep 2
@@ -25,11 +25,9 @@ sleep 2
 # ---- Step 2: Workspace 5 - console ----
 hyprctl dispatch 'hl.dsp.focus({ workspace = "5" })'
 sleep 2
-setsid uwsm-app -- clash-verge &
-sleep 2
 setsid uwsm-app -- xdg-terminal-exec -e btop &
 sleep 2
-setsid uwsm-app -- xdg-terminal-exec --dir="$HOME/Projects/typo" -e mise run desktop-dev &
+setsid uwsm-app -- xdg-terminal-exec --dir="$HOME/Projects/typo" -e mise run desktop:dev &
 sleep 2
 setsid uwsm-app -- xdg-terminal-exec --dir="$HOME/Projects/airvoice" -e mise run cli:dev &
 sleep 2
