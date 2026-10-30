@@ -1,0 +1,257 @@
+#!/usr/bin/env bash
+#
+# kill-tabs - Kill browser tab processes to reclaim memory without closing windows
+#
+# Origin: bash port of sindresorhus/kill-tabs (npm CLI)
+#   https://github.com/sindresorhus/kill-tabs
+#
+# Core concept:
+# Chromium-based browsers use a multi-process architecture. Web page tabs run as
+# dedicated processes with the `--type=renderer` flag. Killing these renderer processes
+# puts the tabs into a discarded/crashed state ("Aw, Snap!"), immediately freeing
+# memory while preserving the browser window, tab list, session state, and extensions.
+#
+# Safari (macOS) is WebKit, not Chromium: it has no `--type=renderer`. Tab processes
+# show up as "Safari Web Content" (possibly truncated in `ps` comm). Match that name
+# so other WKWebView apps (Mail, Notes, …) that share com.apple.WebKit.WebContent
+# are left alone.
+#
+
+set -euo pipefail
+
+# Original npm CLI: chromium, chrome, chrome-canary, brave, edge.
+# Extra Chromium-family here: vivaldi, opera, arc (same --type=renderer model).
+# safari: macOS WebKit only. Firefox/Gecko is not supported.
+SUPPORTED_BROWSERS=(
+  chrome
+  chromium
+  chrome-canary
+  brave
+  edge
+  vivaldi
+  opera
+  arc
+  safari
+)
+
+normalize_browser() {
+  case "$1" in
+    msedge) printf '%s\n' edge ;;
+    *) printf '%s\n' "$1" ;;
+  esac
+}
+
+is_supported_browser() {
+  local name b
+  name="$(normalize_browser "$1")"
+  for b in "${SUPPORTED_BROWSERS[@]}"; do
+    [ "$name" = "$b" ] && return 0
+  done
+  return 1
+}
+
+browsers_csv() {
+  local i
+  printf '%s' "${SUPPORTED_BROWSERS[0]}"
+  for i in "${SUPPORTED_BROWSERS[@]:1}"; do
+    printf ', %s' "$i"
+  done
+  printf '\n'
+}
+
+show_help() {
+  cat << EOF
+Usage: kill-tabs [options] [browser ...]
+
+Kill background tab processes to instantly free memory. Chromium tabs enter a
+discarded state ("Aw, Snap!") and reload when clicked. Safari tabs reload too.
+Windows, tab history, and browser extensions remain untouched.
+
+Options:
+  -n, --dry-run          Preview tabs that would be killed without killing them
+  -v, --verbose          Print PID and browser for each matched tab process
+  -s, --signal <sig>     Kill signal to send (default: 9 / SIGKILL)
+      --no-<browser>     Exclude a specific browser (e.g. --no-brave, --no-chrome)
+  -h, --help             Show this help message
+
+Supported browsers:
+  $(browsers_csv)
+  safari is macOS-only (WebKit). msedge is accepted as an alias for edge.
+
+Examples:
+  kill-tabs               # Kill tabs across all supported browsers
+  kill-tabs --dry-run     # Preview what would be killed
+  kill-tabs chrome brave  # Only kill tabs in Chrome and Brave
+  kill-tabs --no-edge     # Kill tabs in all browsers except Edge
+EOF
+}
+
+DRY_RUN=false
+VERBOSE=false
+SIGNAL="9"
+ONLY_BROWSERS=()
+EXCLUDE_BROWSERS=()
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -n|--dry-run)
+      DRY_RUN=true
+      shift
+      ;;
+    -v|--verbose)
+      VERBOSE=true
+      shift
+      ;;
+    -s|--signal)
+      if [ -z "${2:-}" ]; then
+        echo "Error: --signal requires an argument." >&2
+        exit 1
+      fi
+      SIGNAL="$2"
+      shift 2
+      ;;
+    -h|--help)
+      show_help
+      exit 0
+      ;;
+    --no-*)
+      browser="$(normalize_browser "${1#--no-}")"
+      if ! is_supported_browser "$browser"; then
+        echo "Error: Unknown browser '${1#--no-}'" >&2
+        echo "Supported: $(browsers_csv)" >&2
+        exit 1
+      fi
+      EXCLUDE_BROWSERS+=("$browser")
+      shift
+      ;;
+    --*)
+      browser="$(normalize_browser "${1#--}")"
+      if ! is_supported_browser "$browser"; then
+        echo "Error: Unknown option or browser '$1'" >&2
+        echo "Run 'kill-tabs --help' for usage." >&2
+        exit 1
+      fi
+      ONLY_BROWSERS+=("$browser")
+      shift
+      ;;
+    *)
+      browser="$(normalize_browser "$1")"
+      if ! is_supported_browser "$browser"; then
+        echo "Error: Unknown option or browser '$1'" >&2
+        echo "Run 'kill-tabs --help' for usage." >&2
+        exit 1
+      fi
+      ONLY_BROWSERS+=("$browser")
+      shift
+      ;;
+  esac
+done
+
+ONLY_REGEX=""
+if [ ${#ONLY_BROWSERS[@]} -gt 0 ]; then
+  ONLY_REGEX=$(IFS='|'; echo "${ONLY_BROWSERS[*]}")
+fi
+
+EXCLUDE_REGEX=""
+if [ ${#EXCLUDE_BROWSERS[@]} -gt 0 ]; then
+  EXCLUDE_REGEX=$(IFS='|'; echo "${EXCLUDE_BROWSERS[*]}")
+fi
+
+# Query processes portably across Linux and macOS
+matches=()
+while IFS=' ' read -r pid browser; do
+  [ -n "$pid" ] && matches+=("$pid:$browser")
+done < <(ps -eo pid,args | awk -v only="$ONLY_REGEX" -v exclude="$EXCLUDE_REGEX" '
+function detect_browser(exe) {
+    if (exe ~ /chromium/) return "chromium"
+    if (exe ~ /(chrome-canary|chrome canary)/) return "chrome-canary"
+    if (exe ~ /chrome/) return "chrome"
+    if (exe ~ /brave/) return "brave"
+    if (exe ~ /(msedge|microsoft-edge)/ || exe ~ /edge helper/ || exe ~ /(^|[ \/])edge([.]app|[ \/]|$)/) return "edge"
+    if (exe ~ /vivaldi/) return "vivaldi"
+    if (exe ~ /(^|[ \/])opera([.]app|[ \/]|$)/ || exe ~ /opera helper/) return "opera"
+    if (exe ~ /(^|[ \/])arc([.]app|[ \/]|$)/ || exe ~ /arc helper/) return "arc"
+    return ""
+}
+{
+    pid = $1
+    $1 = ""
+    cmd = tolower($0)
+
+    # Must be a renderer process
+    if (cmd !~ /--type=renderer/) next
+
+    # Exclude extension background pages
+    if (cmd ~ /--extension-process/) next
+
+    # Exclude Chrome top UI / search-in-tabs renderer
+    if (cmd ~ /--top-chrome-webui/) next
+
+    # Extract executable path (strip leading space and everything after the first flag)
+    exe = cmd
+    sub(/^[ \t]+/, "", exe)
+    sub(/[ \t]+--.*$/, "", exe)
+
+    b = detect_browser(exe)
+    if (b == "") next
+
+    # Apply filters
+    if (only != "" && b !~ ("^(" only ")$")) next
+    if (exclude != "" && b ~ ("^(" exclude ")$")) next
+
+    print pid, b
+}')
+
+# macOS Safari: match process name, not the shared WebKit.WebContent binary.
+if [ "$(uname -s)" = Darwin ]; then
+  while IFS=' ' read -r pid browser; do
+    [ -n "$pid" ] && matches+=("$pid:$browser")
+  done < <(ps -ax -o pid= -o comm= | awk -v only="$ONLY_REGEX" -v exclude="$EXCLUDE_REGEX" '
+{
+    pid = $1
+    $1 = ""
+    comm = tolower($0)
+    # "Safari Web Content" / "Safari Web Content (Cached)"; comm may truncate to 16 chars
+    if (comm !~ /safari web cont/) next
+    b = "safari"
+    if (only != "" && b !~ ("^(" only ")$")) next
+    if (exclude != "" && b ~ ("^(" exclude ")$")) next
+    print pid, b
+}')
+fi
+
+total="${#matches[@]}"
+
+if [ "$total" -eq 0 ]; then
+  echo "No active browser tabs found."
+  exit 0
+fi
+
+pids=()
+for item in "${matches[@]}"; do
+  pids+=("${item%%:*}")
+done
+
+counts_str=$(printf '%s\n' "${matches[@]}" | cut -d: -f2 | sort | uniq -c | awk '{ if (NR > 1) printf ", "; printf "%s: %s", $2, $1 } END { print "" }')
+
+if [ "$DRY_RUN" = true ]; then
+  echo "Found $total browser tabs ($counts_str):"
+  for item in "${matches[@]}"; do
+    pid="${item%%:*}"
+    browser="${item#*:}"
+    printf "  - PID %-7s [%s]\n" "$pid" "$browser"
+  done
+  echo "Dry run: no processes were killed."
+  exit 0
+fi
+
+if [ "$VERBOSE" = true ]; then
+  for item in "${matches[@]}"; do
+    pid="${item%%:*}"
+    browser="${item#*:}"
+    printf "  - Killing PID %-7s [%s]\n" "$pid" "$browser"
+  done
+fi
+
+kill -"${SIGNAL}" "${pids[@]}" 2>/dev/null || true
+echo "Killed $total browser tabs ($counts_str)."
