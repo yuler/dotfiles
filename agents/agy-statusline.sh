@@ -60,27 +60,50 @@ def str_width(s: str) -> int:
     return w
 
 
-def check_yolo_mode_from_proc() -> bool:
-    """Check if agy parent process was launched with --dangerously-skip-permissions."""
+def iter_ancestors():
+    """Yield (comm, argv) for each parent process up to pid 1."""
     pid = os.getppid()
     while pid > 1:
         try:
             with open(f"/proc/{pid}/cmdline", "rb") as f:
-                cmd = f.read().decode("utf-8", errors="ignore").replace("\x00", " ")
-                if any(
-                    k in cmd
-                    for k in [
-                        "dangerously-skip-permissions",
-                        "skip-permissions",
-                        "--yolo",
-                        "--solo",
-                    ]
-                ):
-                    return True
-            with open(f"/proc/{pid}/stat", "r") as f:
+                argv = [
+                    p.decode("utf-8", "ignore") for p in f.read().split(b"\x00") if p
+                ]
+            try:
+                with open(f"/proc/{pid}/comm") as f:
+                    comm = f.read().strip()
+            except OSError:
+                comm = ""
+            yield comm, argv
+            with open(f"/proc/{pid}/stat") as f:
                 pid = int(f.read().split()[3])
         except Exception:
             break
+
+
+def check_yolo_mode_from_proc() -> bool:
+    """Check if agy parent process was launched with --dangerously-skip-permissions."""
+    keys = (
+        "dangerously-skip-permissions",
+        "skip-permissions",
+        "--yolo",
+        "--solo",
+    )
+    for _, argv in iter_ancestors():
+        cmd = " ".join(argv)
+        if any(k in cmd for k in keys):
+            return True
+    return False
+
+
+def is_agyb_from_bin_name() -> bool:
+    """True when this statusline was spawned under the `agyb` wrapper."""
+    for comm, argv in iter_ancestors():
+        names = {comm}
+        if argv:
+            names.add(os.path.basename(argv[0].rstrip("/")))
+        if "agyb" in names:
+            return True
     return False
 
 
@@ -179,12 +202,7 @@ def main():
         mode_color = "\033[2m"
         mode_icon = "⚙️"
 
-    is_agyb = (
-        os.environ.get("USER") == "agyb"
-        or "agyb" in os.environ.get("HOME", "")
-        or (len(sys.argv) > 0 and "agyb" in sys.argv[0])
-    )
-    brand = "AGY(B)" if is_agyb else "AGY"
+    brand = "AGY(B)" if is_agyb_from_bin_name() else "AGY"
 
     quota = data.get("quota") or {}
     ctx = data.get("context_window") or {}
