@@ -62,5 +62,8 @@ o.window("^herdr$", { float = true })
 o.window("^herdr$", { center = true })
 o.window("^herdr$", { size = { 1400, 900 } })
 
+-- Fullscreen screensaver.
+o.window("org.omarchy.screensaver", { fullscreen = true, float = true })
+
 -- Typo indicator window rule.
 require("hypr.typo")
