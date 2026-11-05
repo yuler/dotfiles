@@ -19,6 +19,9 @@ link_file "$DOTFILES_DIR/omarchy/default/hypr/qconsole.lua" "$HOME/.config/defau
 # Herdr configuration
 link_file "$DOTFILES_DIR/omarchy/herdr/config.toml" "$HOME/.config/herdr/config.toml"
 
+# Omarchy menu extensions
+link_file "$DOTFILES_DIR/omarchy/extensions/omarchy-menu.jsonc" "$HOME/.config/omarchy/extensions/omarchy-menu.jsonc"
+
 # Clean up legacy workspace layout override files so default layout takes effect
 rm -f "$HOME/.local/state/omarchy/workspace-layouts"/{1,2,3,4}.lua 2>/dev/null || true
 

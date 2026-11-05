@@ -6,21 +6,21 @@ Guidelines for coding agents for this repo
 
 Personal dotfiles for shell, git, editor, and desktop tooling. Config files live in the repo root and are symlinked into `$HOME` via `install.sh`.
 
-| Path         | Purpose                                          |
-| ------------ | ------------------------------------------------ |
-| `install.sh` | Interactive modular installer (using gum)        |
-| `install/`   | Modular install scripts (shell, git, etc.)       |
-| `brew.sh`    | Install CLI and GUI packages                     |
-| `npms.sh`    | Install global npm CLIs                          |
-| `bin/`       | Helper scripts (git, omarchy, `gen`, etc.)       |
-| `.aliases`   | Shell aliases                                    |
-| `.functions` | Shell functions                                  |
-| `.exports`   | Environment variables                            |
-| `.gitconfig` | Git config (local overrides in `*.local`)        |
-| `.vscode/`   | VS Code settings and keybindings                 |
-| `omarchy/`   | Omarchy/Hyprland desktop configs (→ `~/.config`) |
-| `agents/`    | Agent scripts and USER.md profile                |
-| `tests/`     | Shell script tests                               |
+| Path         | Purpose                                                      |
+| ------------ | ------------------------------------------------------------ |
+| `install.sh` | Interactive modular installer (using gum)                    |
+| `install/`   | Modular install scripts (shell, git, etc.)                   |
+| `brew.sh`    | Install CLI and GUI packages                                 |
+| `npms.sh`    | Install global npm CLIs                                      |
+| `bin/`       | Helper scripts (git, omarchy, `gen`, etc.)                   |
+| `.aliases`   | Shell aliases                                                |
+| `.functions` | Shell functions                                              |
+| `.exports`   | Environment variables                                        |
+| `.gitconfig` | Git config (local overrides in `*.local`)                    |
+| `.vscode/`   | VS Code settings and keybindings                             |
+| `omarchy/`   | Omarchy desktop configs (hypr, herdr, menu → `~/.config`)    |
+| `agents/`    | Agent scripts and USER.md profile                            |
+| `tests/`     | Shell script tests                                           |
 
 ## Rules
 
