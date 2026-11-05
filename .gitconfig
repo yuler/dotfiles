@@ -8,8 +8,9 @@ defaultBranch = main
 [http]
 postBuffer = 100000000
 
-[http "https://github.com"]
-proxy = http://127.0.0.1:7890
+# Mihomo TUN already proxies system traffic; avoid stacking a second HTTP proxy.
+# [http "https://github.com"]
+# proxy = http://127.0.0.1:7890
 
 [pull]
 rebase = true
