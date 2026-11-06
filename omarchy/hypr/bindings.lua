@@ -87,3 +87,14 @@ for workspace, code in pairs(numpad_workspace_codes) do
   o.bind("SUPER + SHIFT + " .. key, "Move window to workspace " .. workspace, hl.dsp.window.move({ workspace = tostring(workspace) }))
   o.bind("SUPER + SHIFT + ALT + " .. key, "Move window silently to workspace " .. workspace, hl.dsp.window.move({ workspace = tostring(workspace), follow = false }))
 end
+
+-- Same numpad alias for Omarchy's SUPER+ALT+1..5 "switch to group window N"
+-- (defaults only bind top-row code:10..14).
+for index = 1, 5 do
+  local code = numpad_workspace_codes[index]
+  o.bind(
+    "SUPER + ALT + code:" .. code,
+    "Switch to group window " .. index,
+    hl.dsp.group.active({ index = index })
+  )
+end

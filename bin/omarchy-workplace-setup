@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+# omarchy:summary=Set up workplaces after login (manual; not on autostart)
+#
+# Aligned with Omarchy Workplace Convention — run once the desktop is settled:
+#   omarchy-workplace-setup
+#
+#   S  scratchpad     herdr only (seeded by hypr/scratchpad.lua)
+#   1  AI GUI group   grok-bot + Cursor (grouped) | narrow mobile browser
+#   2  single browser
+#   3  WeChat | slightly wider browser
+#   4  temp parking (nothing pre-launched)
+#   5  boot / background   btop + project daemon terminals
+#   0→10 uncommon    magpie (key 0 maps to workspace 10)
+#
+# Cold workplaces first; finish on WS1.
+
+export PATH="$HOME/.local/bin:$HOME/Projects/dotfiles/bin:$PATH"
+
+sleep 2
+
+# Remove legacy workspace layout overrides so global dwindle applies cleanly.
+rm -f "$HOME/.local/state/omarchy/workspace-layouts"/{1,2,3,4}.lua 2>/dev/null || true
+
+focus_ws() {
+  hyprctl dispatch "hl.dsp.focus({ workspace = \"$1\" })"
+}
+
+# Address of the first client matching class on a workspace id (or any if ws empty).
+addr_of() {
+  local class=$1 ws=${2:-}
+  hyprctl clients -j | python3 -c '
+import json, sys
+cls, ws = sys.argv[1].lower(), sys.argv[2]
+for c in json.load(sys.stdin):
+  if (c.get("class") or "").lower() != cls:
+    continue
+  if ws and str(c["workspace"].get("id")) != ws and c["workspace"].get("name") != ws:
+    continue
+  print(c["address"])
+  break
+' "$class" "$ws"
+}
+
+wait_class_on_ws() {
+  local class=$1 ws=$2 tries=${3:-40}
+  local i
+  for i in $(seq 1 "$tries"); do
+    [[ -n $(addr_of "$class" "$ws") ]] && return 0
+    sleep 0.5
+  done
+  return 1
+}
+
+# ---- WS10 (key 0): magpie ----
+# Hyprland has no workspace 0; SUPER+0 focuses workspace 10.
+focus_ws 10
+sleep 2
+setsid uwsm-app -- magpie &
+sleep 2
+
+# ---- WS5: boot / background ----
+focus_ws 5
+sleep 2
+setsid uwsm-app -- xdg-terminal-exec -e btop &
+sleep 2
+setsid uwsm-app -- xdg-terminal-exec --dir="$HOME/Projects/typo" -e mise run desktop:dev &
+sleep 2
+setsid uwsm-app -- xdg-terminal-exec --dir="$HOME/Projects/airvoice" -e mise run cli:dev &
+sleep 2
+
+# ---- WS3: WeChat | slightly wider browser ----
+focus_ws 3
+sleep 2
+setsid uwsm-app -- "$HOME/Applications/WeChat" &
+sleep 2
+setsid omarchy launch browser &
+sleep 2
+# WeChat (left) ~1/3, browser (right) ~2/3
+omarchy-workplace-split 1/3 3 || true
+
+# ---- WS2: single browser ----
+focus_ws 2
+sleep 2
+setsid omarchy launch browser --new-window &
+sleep 2
+
+# ---- WS1: grok-bot + Cursor group | narrow mobile browser ----
+focus_ws 1
+sleep 2
+
+if command -v grok-bot >/dev/null 2>&1; then
+  setsid uwsm-app -- grok-bot &
+  wait_class_on_ws grok-bot 1 || true
+  sleep 1
+fi
+
+setsid uwsm-app -- cursor &
+wait_class_on_ws cursor 1 || true
+sleep 1
+
+# Group grok-bot + Cursor when both exist (narrow browser stays outside the group).
+grok_addr=$(addr_of grok-bot 1)
+cursor_addr=$(addr_of cursor 1)
+if [[ -n $grok_addr && -n $cursor_addr ]]; then
+  hyprctl dispatch "hl.dsp.focus({ window = \"address:$grok_addr\" })"
+  sleep 0.2
+  hyprctl dispatch "hl.dsp.group.toggle()"
+  sleep 0.2
+  hyprctl dispatch "hl.dsp.focus({ window = \"address:$cursor_addr\" })"
+  sleep 0.2
+  hyprctl dispatch "hl.dsp.window.move({ into_group = \"l\" })"
+  sleep 0.3
+fi
+
+# Narrow mobile companion browser (small window; dwindle keeps it as the side column).
+default_browser=$(omarchy-cmd-default-browser 2>/dev/null || true)
+browser_exec=""
+if [[ -n $default_browser ]]; then
+  IFS=: read -ra data_dirs <<<"${XDG_DATA_HOME:-$HOME/.local/share}:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+  for data_dir in "${data_dirs[@]}"; do
+    entry="$data_dir/applications/$default_browser"
+    [[ -f $entry ]] || continue
+    browser_exec=$(sed -n 's/^Exec=\([^ ]*\).*/\1/p' "$entry" | head -1)
+    break
+  done
+fi
+if [[ -n $browser_exec ]]; then
+  setsid uwsm-app -- "$browser_exec" --new-window --window-size=420,900 \
+    --user-agent="Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1" \
+    about:blank &
+else
+  setsid omarchy launch browser --new-window &
+fi
+sleep 2
+# AI GUI group (left) ~2/3, mobile browser (right) ~1/3
+omarchy-workplace-split 2/3 1 || true
+
+# ---- Scratchpad: preheat herdr (seeded by hypr/scratchpad.lua), then hide ----
+hyprctl dispatch 'hl.dsp.workspace.toggle_special("scratchpad")'
+sleep 2
+hyprctl dispatch 'hl.dsp.workspace.toggle_special("scratchpad")'
+
+# Land on the main AI GUI workplace.
+focus_ws 1

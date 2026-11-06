@@ -48,4 +48,28 @@
     "action": "notify-send 'Kill Tabs' \"$(kill-tabs)\"",
     "keywords": "browser chrome memory tabs kill renderer",
   },
+
+  "trigger.workplace-setup": {
+    "icon": "󰍹",
+    "label": "Workplace Setup",
+    "description": "Lay out workplaces after login (manual; not on boot)",
+    "action": "notify-send 'Workplace Setup' 'Starting…' && \"$HOME/Projects/dotfiles/bin/omarchy-workplace-setup\" && notify-send 'Workplace Setup' 'Done'",
+    "keywords": "workplace setup workspace herdr layout boot login",
+  },
+
+  "trigger.workplace-split-wide-left": {
+    "icon": "󰕰",
+    "label": "Split 2/3 | 1/3",
+    "description": "Left column 2/3, right 1/3 (WS1 AI GUI style)",
+    "action": "omarchy-workplace-split 2/3 && notify-send 'Workplace Split' 'Left 2/3 · Right 1/3'",
+    "keywords": "split width two thirds workplace layout",
+  },
+
+  "trigger.workplace-split-narrow-left": {
+    "icon": "󰕰",
+    "label": "Split 1/3 | 2/3",
+    "description": "Left column 1/3, right 2/3 (WS3 chat style)",
+    "action": "omarchy-workplace-split 1/3 && notify-send 'Workplace Split' 'Left 1/3 · Right 2/3'",
+    "keywords": "split width one third workplace layout wechat",
+  },
 }

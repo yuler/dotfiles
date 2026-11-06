@@ -11,6 +11,5 @@ o.launch_on_start("$HOME/Projects/dotfiles/bin/omarchy-herdr-notify >> /tmp/omar
 -- (Migrated from Omarchy 3 autostart.conf)
 o.launch_on_start("$HOME/Projects/dotfiles/bin/omarchy-fcitx-idle-english >> /tmp/fcitx-idle-english.log 2>&1")
 
--- Login layout startup script.
--- Script: ~/Projects/dotfiles/bin/omarchy-startup-workspaces.sh
-o.exec_on_start("$HOME/Projects/dotfiles/bin/omarchy-startup-workspaces.sh")
+-- Workplace layout is manual (avoids login jank):
+--   omarchy-workplace-setup

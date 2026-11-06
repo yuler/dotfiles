@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+# omarchy:summary=Set the left tiled column to 2/3 or 1/3 of the monitor width
+# omarchy:args=[2/3|1/3] [workspace-id]
+# omarchy:examples=omarchy-workplace-split 2/3 | omarchy-workplace-split 1/3 3
+#
+# Right column gets the remainder. Grouped windows that share an x position
+# count as one column (one address is resized).
+
+set -euo pipefail
+
+left_frac=${1:-2/3}
+workspace=${2:-}
+
+case $left_frac in
+  2/3 | 0.67 | 0.666) num=2; den=3 ;;
+  1/3 | 0.33 | 0.333) num=1; den=3 ;;
+  *)
+    echo "Usage: omarchy-workplace-split [2/3|1/3] [workspace-id]" >&2
+    exit 1
+    ;;
+esac
+
+hypr_dispatch() {
+  local lua=$1
+  shift
+  hyprctl dispatch "$lua" >/dev/null 2>&1 || hyprctl dispatch "$@" >/dev/null
+}
+
+read -r address current_width monitor_width < <(
+  hyprctl clients -j | python3 -c '
+import json, sys
+
+left_num, left_den = int(sys.argv[1]), int(sys.argv[2])
+want_ws = sys.argv[3]
+
+clients = json.load(sys.stdin)
+monitors = {m["id"]: m for m in json.loads(
+  __import__("subprocess").check_output(["hyprctl", "monitors", "-j"], text=True)
+)}
+
+if not want_ws:
+  aw = json.loads(
+    __import__("subprocess").check_output(["hyprctl", "activeworkspace", "-j"], text=True)
+  )
+  want_ws = str(aw.get("id") or "")
+
+tiled = []
+for c in clients:
+  if c.get("floating") or c.get("fullscreen"):
+    continue
+  ws = c.get("workspace") or {}
+  if str(ws.get("id")) != want_ws and ws.get("name") != want_ws:
+    continue
+  tiled.append(c)
+
+if len(tiled) < 2:
+  sys.exit(2)
+
+# One representative per column (same x ≈ same split slot / group).
+columns = {}
+for c in sorted(tiled, key=lambda w: (w["at"][0], w["focusHistoryID"])):
+  x = c["at"][0]
+  key = min(columns, key=lambda k: abs(k - x), default=None)
+  if key is not None and abs(key - x) <= 24:
+    continue
+  columns[x] = c
+
+ordered = [columns[x] for x in sorted(columns)]
+if len(ordered) < 2:
+  sys.exit(2)
+
+left = ordered[0]
+mon = monitors.get(left["monitor"])
+if not mon:
+  sys.exit(3)
+
+# Logical usable width (gaps ignored; good enough for 2/3·1/3).
+width = int(mon["width"] / max(mon.get("scale") or 1, 0.1))
+print(left["address"], left["size"][0], width)
+' "$num" "$den" "$workspace"
+) || {
+  echo "omarchy-workplace-split: need two tiled columns on the workspace" >&2
+  exit 1
+}
+
+target=$((monitor_width * num / den))
+delta=$((target - current_width))
+((delta == 0)) && exit 0
+
+# Probe resize direction the way omarchy-hyprland-window-width does.
+window="address:$address"
+direction=""
+for probe in 10 -10; do
+  hypr_dispatch "hl.dsp.window.resize({ window = \"$window\", x = $probe, y = 0, relative = true })" \
+    resizeactive "$probe" 0 "$window"
+  next=$(hyprctl clients -j | python3 -c 'import json,sys; a=sys.argv[1]
+for c in json.load(sys.stdin):
+  if c["address"]==a: print(c["size"][0]); break' "$address")
+  if ((next != current_width)); then
+    if (((next - current_width) * probe > 0)); then
+      direction=1
+    else
+      direction=-1
+    fi
+    current_width=$next
+    break
+  fi
+done
+
+[[ -n $direction ]] || exit 1
+
+for _ in {1..8}; do
+  delta=$((target - current_width))
+  ((delta == 0)) && break
+  probe_delta=$((delta * direction))
+  hypr_dispatch "hl.dsp.window.resize({ window = \"$window\", x = $probe_delta, y = 0, relative = true })" \
+    resizeactive "$probe_delta" 0 "$window"
+  next=$(hyprctl clients -j | python3 -c 'import json,sys; a=sys.argv[1]
+for c in json.load(sys.stdin):
+  if c["address"]==a: print(c["size"][0]); break' "$address")
+  ((next == current_width)) && break
+  current_width=$next
+done

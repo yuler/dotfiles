@@ -28,6 +28,7 @@ require("hypr.input")
 require("hypr.bindings")
 require("hypr.looknfeel")
 require("hypr.autostart")
+require("hypr.scratchpad")
 
 -- Toggle config flags dynamically.
 require("default.hypr.toggles")
@@ -35,9 +36,9 @@ require("default.hypr.toggles")
 -- Add any other personal Hyprland configuration below.
 -- o.window("qemu", { workspace = "5" })
 
--- WeChat: start at a ~700px chat column in the scrolling layout (workspace 3).
+-- WeChat: ~1/3 width in scrolling layout (workspace 3; browser gets ~2/3).
 -- Keep new-message activation from stealing focus (same as Telegram).
-o.window("wechat", { scrolling_width = 0.37, focus_on_activate = false })
+o.window("wechat", { scrolling_width = 0.33, focus_on_activate = false })
 
 -- WeChat popups (image/video preview, etc.): float them instead of tiling
 -- them. `negative:` passes when the regex fails, so the main "Weixin"
@@ -53,14 +54,14 @@ o.window({ class = "^$", title = "^WeChat$", xwayland = true }, { float = true, 
 -- applied after that and turns the panel into a normal floating window.
 o.window({ class = "^magpie$", title = "^magpie$" }, { float = true, center = true })
 
--- Herdr: always float centered, so opening/closing it never shifts the
--- tiling layout. Herdr runs inside foot (class=foot like every terminal),
--- so the launcher must give it a dedicated app-id:
---   bin/omarchy-launch-terminal-herdr  (SUPER + CTRL + RETURN, see bindings.lua)
--- Plain `foot -e herdr` windows (e.g. the login workspace) stay tiled.
+-- Herdr: float centered on normal workplaces so open/close does not shift
+-- tiling. On special:scratchpad it must be tiled full-width instead (see
+-- hypr/scratchpad.lua). Launcher must use --app-id=herdr:
+--   bin/omarchy-launch-terminal-herdr  (SUPER + CTRL + RETURN)
 o.window("^herdr$", { float = true })
 o.window("^herdr$", { center = true })
 o.window("^herdr$", { size = { 1400, 900 } })
+o.window({ class = "^herdr$", workspace = "special:scratchpad" }, { float = false })
 
 -- Fullscreen screensaver.
 o.window("org.omarchy.screensaver", { fullscreen = true, float = true })
