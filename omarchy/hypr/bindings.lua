@@ -98,3 +98,8 @@ for index = 1, 5 do
     hl.dsp.group.active({ index = index })
   )
 end
+
+-- Swap order inside a window group (not focus switch; not tile swap).
+-- SUPER+SHIFT+ALT+方向 is already "move workspace to monitor".
+o.bind("SUPER + CTRL + ALT + RIGHT", "Swap with next in group", hl.dsp.group.move_window({ forward = true }))
+o.bind("SUPER + CTRL + ALT + LEFT", "Swap with prev in group", hl.dsp.group.move_window({ forward = false }))
