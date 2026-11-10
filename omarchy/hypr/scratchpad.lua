@@ -27,8 +27,17 @@ local function on_scratchpad(window)
   return ws and ws.name == PAD
 end
 
+local seeding = false
+
 local function seed_herdr()
-  hl.exec_cmd(HERDR_LAUNCH, { workspace = PAD, silent = true })
+  if seeding then
+    return
+  end
+  seeding = true
+  hl.exec_cmd(HERDR_LAUNCH, { workspace = PAD .. " silent" })
+  hl.timer(function()
+    seeding = false
+  end, { type = "oneshot", timeout = 2000 })
 end
 
 local function seed_if_empty(workspace)
@@ -47,6 +56,7 @@ local function settle_herdr(window)
   if not window or not window.address or not is_herdr(window) or not on_scratchpad(window) then
     return
   end
+  seeding = false
   local addr = "address:" .. window.address
   -- Override the global float+center rule so herdr fills the pad as a tile.
   if window.floating then
