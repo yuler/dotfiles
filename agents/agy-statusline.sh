@@ -209,7 +209,7 @@ def main():
     used_pct = ctx.get("used_percentage")
 
     # Progressive adaptation ladder for small / wide terminals
-    strategies = [
+    single_line_strategies = [
         # (time_mode, show_3p_wk, model_mode, effort, tags, sep, minimal)
         ("full",    True,  "full",  True,  "full",    "normal",  False),
         ("full",    False, "full",  True,  "full",    "compact", False),
@@ -217,12 +217,10 @@ def main():
         ("full",    False, "clean", False, "full",    "compact", False),
         ("compact", False, "clean", False, "full",    "compact", False),
         ("compact", False, "clean", False, "compact", "tight",   False),
-        ("none",    False, "clean", False, "compact", "tight",   False),
-        ("none",    False, "clean", False, "compact", "tight",   True),
     ]
 
-    selected_line = ""
-    for time_mode, show_3p_wk, model_mode, effort, tags, sep_style, minimal in strategies:
+    # 1. Attempt single-line display if width allows and countdowns fit
+    for time_mode, show_3p_wk, model_mode, effort, tags, sep_style, minimal in single_line_strategies:
         # 1. Model Name
         m_name = raw_model_name
         if model_mode == "clean":
@@ -324,12 +322,119 @@ def main():
         total = l_len + 1 + r_len
         if total <= term_width:
             pad = max(1, term_width - l_len - r_len)
-            selected_line = f"{left}{' ' * pad}{right}"
-            break
-        pad = max(1, term_width - l_len - r_len)
-        selected_line = f"{left}{' ' * pad}{right}"
+            print(f"{left}{' ' * pad}{right}")
+            return
 
-    print(selected_line)
+    # 2. Multi-line display (2 lines) for narrow terminals (e.g. mobile/small windows)
+    # Line 1: Identity & Mode (Left) + Context Usage (Right)
+    line1 = ""
+    for m_clean, effort, compact_tags in [
+        (False, True, False),
+        (True, True, False),
+        (True, False, False),
+        (True, False, True),
+    ]:
+        m_name = raw_model_name
+        if m_clean:
+            m_name = m_name.replace("Gemini ", "").replace("Claude ", "")
+        if not effort:
+            m_name = re.sub(r"\s*\([^)]*\)", "", m_name)
+
+        if compact_tags:
+            yolo_tag = "\033[35m🚀 yolo\033[0m" if is_yolo else ""
+            mode_tag = f"{mode_color}{mode_icon} {mode_text}\033[0m" if mode_text else ""
+            l_sep = " "
+        else:
+            yolo_tag = "\033[35m🚀 [yolo]\033[0m" if is_yolo else ""
+            mode_tag = f"{mode_color}{mode_icon} [{mode_text}]\033[0m" if mode_text else ""
+            l_sep = "  "
+
+        l_items = [f"\033[36m{brand} · {m_name}\033[0m"]
+        if yolo_tag:
+            l_items.append(yolo_tag)
+        if mode_tag:
+            l_items.append(mode_tag)
+        l1_left = l_sep.join(l_items)
+
+        l1_right = ""
+        if used_pct is not None:
+            l1_right = (
+                f"\033[35m📊 {used_pct:.0f}%\033[0m"
+                if compact_tags
+                else f"\033[35m📊 Ctx: {used_pct:.1f}%\033[0m"
+            )
+
+        l1_needed = str_width(l1_left) + (1 + str_width(l1_right) if l1_right else 0)
+        if l1_needed <= term_width:
+            pad = max(1, term_width - str_width(l1_left) - str_width(l1_right)) if l1_right else 0
+            line1 = f"{l1_left}{' ' * pad}{l1_right}" if l1_right else l1_left
+            break
+    if not line1:
+        line1 = l1_left
+
+    # Line 2: Model Quotas with Recharge Countdown Timers
+    l2_strategies = [
+        # (time_mode, show_argon, show_3p, sep)
+        ("full",    True,  True,  "  "),
+        ("compact", True,  True,  "  "),
+        ("compact", True,  True,  " "),
+        ("compact", True,  False, "  "),
+        ("compact", True,  False, " "),
+        ("compact", False, False, "  "),
+        ("compact", False, False, " "),
+    ]
+
+    line2 = ""
+    for time_mode, show_argon, show_3p, sep in l2_strategies:
+        parts = []
+        g_parts = []
+        g_5h = quota.get("gemini-5h")
+        if g_5h and "remaining_fraction" in g_5h:
+            pct_5h = int(round(g_5h["remaining_fraction"] * 100))
+            c_5h = get_color(pct_5h)
+            t_5h = fmt_time(get_reset_secs(g_5h), time_mode)
+            t_str = f" \033[2m({t_5h})\033[0m" if t_5h else ""
+            g_parts.append(f"{c_5h}5h: {pct_5h}%\033[0m{t_str}")
+
+        g_wk = quota.get("gemini-weekly")
+        if g_wk and "remaining_fraction" in g_wk:
+            pct_wk = int(round(g_wk["remaining_fraction"] * 100))
+            c_wk = get_color(pct_wk)
+            t_wk = fmt_time(get_reset_secs(g_wk), time_mode)
+            t_str = f" \033[2m({t_wk})\033[0m" if t_wk else ""
+            g_parts.append(f"{c_wk}Wk: {pct_wk}%\033[0m{t_str}")
+
+        if g_parts:
+            parts.append(f"⚡ {' '.join(g_parts)}")
+
+        if show_argon:
+            argon_q = quota.get("gemini-argon-wtu-weekly") or next(
+                (v for k, v in quota.items() if "argon" in k), None
+            )
+            if argon_q and "remaining_fraction" in argon_q:
+                pct_ar = int(round(argon_q["remaining_fraction"] * 100))
+                c_ar = get_color(pct_ar)
+                t_ar = fmt_time(get_reset_secs(argon_q), time_mode)
+                t_str = f" \033[2m({t_ar})\033[0m" if t_ar else ""
+                parts.append(f"{c_ar}Arg: {pct_ar}%\033[0m{t_str}")
+
+        if show_3p:
+            p3_5h = quota.get("3p-5h")
+            if p3_5h and "remaining_fraction" in p3_5h:
+                pct_3p = int(round(p3_5h["remaining_fraction"] * 100))
+                c_3p = get_color(pct_3p)
+                t_3p = fmt_time(get_reset_secs(p3_5h), time_mode)
+                t_str = f" \033[2m({t_3p})\033[0m" if t_3p else ""
+                parts.append(f"{c_3p}3P: {pct_3p}%\033[0m{t_str}")
+
+        candidate = sep.join(parts)
+        if str_width(candidate) <= term_width:
+            line2 = candidate
+            break
+    if not line2:
+        line2 = candidate
+
+    print(f"{line1}\n{line2}")
 
 
 if __name__ == "__main__":
