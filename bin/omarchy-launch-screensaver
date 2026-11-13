@@ -383,10 +383,20 @@ wait_for_screensaver_window() {
   done
 }
 
+hypr_close_special() {
+  local special
+  special=$(hyprctl monitors -j | jq -r --arg m "$1" '.[] | select(.name == $m) | .specialWorkspace.name // ""')
+  special=${special#special:}
+  if [[ -n $special ]]; then
+    hyprctl dispatch "hl.dsp.workspace.toggle_special(\"$special\")" >/dev/null 2>&1 || hyprctl dispatch togglespecialworkspace "$special" >/dev/null
+  fi
+}
+
 for m in $(hyprctl monitors -j | jq -r '.[] | .name'); do
   hypr_focus_monitor "$m"
+  hypr_close_special "$m"
 
-  hypr_exec foot --app-id=org.omarchy.screensaver --config="$HOME/.config/foot/screensaver.ini" -e "$SCRIPT_PATH" --render
+  hypr_exec foot -F --app-id=org.omarchy.screensaver --config="$HOME/.config/foot/screensaver.ini" -e "$SCRIPT_PATH" --render
 
   wait_for_screensaver_window
 done

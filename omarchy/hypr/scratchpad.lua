@@ -87,11 +87,23 @@ local function eject(window)
   local current = mon and mon.active_workspace
   local dest = (current and current.id and current.id > 0) and tostring(current.id) or "m~0"
 
+  local fs = window.fullscreen or 0
+  local addr = "address:" .. window.address
+
   hl.dispatch(hl.dsp.window.move({
     workspace = dest,
     follow = true,
-    window = "address:" .. window.address,
+    window = addr,
   }))
+
+  -- Moving out of the special workspace clears Hyprland's fullscreen state.
+  if fs ~= 0 then
+    hl.dispatch(hl.dsp.window.fullscreen({
+      mode = fs == 1 and "maximized" or "fullscreen",
+      action = "set",
+      window = addr,
+    }))
+  end
 end
 
 -- Let the window finish mapping / landing on the pad before settling / ejecting.

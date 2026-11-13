@@ -64,7 +64,8 @@ o.window("^herdr$", { size = { 1400, 900 } })
 o.window({ class = "^herdr$", workspace = "special:scratchpad" }, { float = false })
 
 -- Fullscreen screensaver.
-o.window("org.omarchy.screensaver", { fullscreen = true, float = true })
+o.window("org.omarchy.screensaver", { float = true })
+o.window("org.omarchy.screensaver", { fullscreen = true })
 
 -- Typo indicator window rule.
 require("hypr.typo")
