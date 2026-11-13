@@ -3,6 +3,11 @@
 # Desktop stays on herdr. Closing Termius drops the client; the session keeps running.
 set -euo pipefail
 
+# Terminals/Termius render UTF-8 fine outside tmux, but tmux itself checks
+# LANG/LC_* and falls back to C (breaks CJK) when they are unset on macOS.
+export LANG="${LANG:-en_US.UTF-8}"
+export LC_ALL="${LC_ALL:-en_US.UTF-8}"
+
 session="${1:-agent}"
 
-exec tmux new-session -A -s "$session"
+exec tmux -u new-session -A -s "$session"

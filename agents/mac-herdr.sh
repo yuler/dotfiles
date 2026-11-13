@@ -174,9 +174,10 @@ next_workspace = ["prefix+shift+n", "alt+down"]
 # Blue accent matches the Omarchy tmux status bar.
 accent = "blue"
 
-# tmux drew single-line dividers between panes with no outer frame.
-pane_gaps = false
-pane_outer_borders = false
+# Each pane gets its own frame so the focused pane's accent border is obvious.
+# (tmux-style shared splitters with no outer frame made focus too easy to miss.)
+pane_gaps = true
+pane_outer_borders = true
 
 # tmux had no scrollbar column beside its panes.
 pane_scrollbars = false
