@@ -6,7 +6,7 @@ AGY (Antigravity CLI) Custom Statusline Renderer
 
 Overview:
   Renders a real-time, responsive two-sided status bar in the Antigravity CLI (agy).
-  - Left side : Brand (AGY/AGY(B)) · Model name + Permission ([yolo]) + Mode ([plan]/[edit])
+  - Left side : Brand (AGY/AGYB/AGYC/...) · Model name + Permission ([yolo]) + Mode ([plan]/[edit])
   - Right side: Quotas (Gemini 5h & Weekly, Argon/Latest, 3P) with recharge countdowns + Context usage
 
 Usage:
@@ -96,15 +96,30 @@ def check_yolo_mode_from_proc() -> bool:
     return False
 
 
-def is_agyb_from_bin_name() -> bool:
-    """True when this statusline was spawned under the `agyb` wrapper."""
+def get_brand_from_bin_name() -> str:
+    """Detect the `agy*` command name from ancestor processes and format as brand."""
+    matched = None
     for comm, argv in iter_ancestors():
-        names = {comm}
+        candidates = []
         if argv:
-            names.add(os.path.basename(argv[0].rstrip("/")))
-        if "agyb" in names:
-            return True
-    return False
+            candidates.append(os.path.basename(argv[0].rstrip("/")))
+        if comm:
+            candidates.append(comm)
+
+        agy_name = next(
+            (
+                name
+                for name in candidates
+                if name.startswith("agy") and not name.startswith("agy-statusline")
+            ),
+            None,
+        )
+        if agy_name:
+            matched = agy_name
+        elif matched is not None:
+            break
+
+    return (matched or "agy").upper()
 
 
 def get_color(pct: int) -> str:
@@ -202,7 +217,7 @@ def main():
         mode_color = "\033[2m"
         mode_icon = "⚙️"
 
-    brand = "AGY(B)" if is_agyb_from_bin_name() else "AGY"
+    brand = get_brand_from_bin_name()
 
     quota = data.get("quota") or {}
     ctx = data.get("context_window") or {}
