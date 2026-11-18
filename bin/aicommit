@@ -2,7 +2,7 @@
 
 # AI-assisted git commit.
 #
-# Try agents in order: opencode → cursor-agent → pi. Stop on first success;
+# Try agents in order: pi → opencode → cursor-agent. Stop on first success;
 # if all fail, exit with error. Note: this is an executable script (not a
 # sourced shell function), so we cannot rely on shell aliases like `gaa`/`gpo`.
 
@@ -417,6 +417,10 @@ try_agent() {
 run_commit_agents() {
   local status
 
+  try_agent "pi" agent_pi && return 0
+  status=$?
+  was_interrupted "$status" && return 130
+  echo "Falling back to opencode..."
   try_agent "opencode" agent_opencode && return 0
   status=$?
   was_interrupted "$status" && return 130
@@ -424,12 +428,8 @@ run_commit_agents() {
   try_agent "cursor-agent" agent_cursor && return 0
   status=$?
   was_interrupted "$status" && return 130
-  echo "Falling back to pi..."
-  try_agent "pi" agent_pi && return 0
-  status=$?
-  was_interrupted "$status" && return 130
 
-  echo "All agents failed (opencode, cursor-agent, pi)"
+  echo "All agents failed (pi, opencode, cursor-agent)"
   return 1
 }
 
