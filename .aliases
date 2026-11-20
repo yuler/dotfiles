@@ -130,5 +130,5 @@ alias npkill='npx npkill -s size'
 # AI agent CI
 alias c='opencode'
 alias ca='cursor-agent --disable-auto-update'
-alias agy="agy --dangerously-skip-permissions"
+alias agy="agy --dangerously-skip-permissions --model gemini-4-hydrogen-high"
 alias kiro-cli='kiro-cli chat --trust-all-tools --trust-workspace'
