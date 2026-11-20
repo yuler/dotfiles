@@ -131,3 +131,4 @@ alias npkill='npx npkill -s size'
 alias c='opencode'
 alias ca='cursor-agent --disable-auto-update'
 alias agy="agy --dangerously-skip-permissions"
+alias kiro-cli='kiro-cli chat --trust-all-tools --trust-workspace'
